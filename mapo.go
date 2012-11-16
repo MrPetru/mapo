@@ -20,51 +20,93 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
-	"mapo/log"
+    "mapo/database"
+    "mapo/managers/addon"
+    "mapo/log"
+    
+    "net/http"
+    "os"
+    "os/signal"
+    "syscall"
+    "sync"
+    "time"
 )
 
 func main() {
-	// parse flags
 
-	// load config and setup application
-	log.SetLevel(log.DEBUG)
-	log.Info("Setting log level to DEBUG")
+    log.SetLevel("INFO")
+    
+    // create a new connection to database
+    database.NewConnection()
+    log.Msg("created a new database connection")
+    
+    // register for all available addons
+    addons := addon.GetAll()
+    addons = addons
+    log.Msg("load addons and generate a list")
+    
+    // create and start a server http
+    c := make(chan os.Signal, 1)
+    signal.Notify(c, syscall.SIGINT)//, syscall.SIGTERM)
+    
+    s := new(server)
+    // TODO: register this node to load balancing service
+    go s.signals(c)
+    
+    log.Info("start listening for requests")
+    log.Msg("close server with message: %v", http.ListenAndServe(":8081", s))
+}
 
-	log.Info("Starting application")
+type server struct {
+    current_connections int
+    lock sync.Mutex
+    closing bool
+}
 
-	// register with supervisor
-	log.Info("Joining supervisor")
+func (s *server) RequestHandler(out http.ResponseWriter, in *http.Request) {
 
-	// init db
-	log.Info("Initializing db")
+    log.Msg("executing RequestHandler function")
+    // collect request data
+    
+    // authenticate
+    
+    // run router
+    
+    // send response to client
+}
 
-	// load addons
-	log.Info("Loading addons")
+func (s *server) ServeHTTP(out http.ResponseWriter, in *http.Request) {
+    
+    if !s.closing {
+        s.lock.Lock()
+        s.current_connections++
+        s.lock.Unlock()
+        
+        defer func() {
+            s.lock.Lock()
+            s.current_connections--
+            s.lock.Unlock()
+        }()
+        
+        s.RequestHandler(out, in)
+    }
+}
 
-	// register handlers
-	log.Info("Registering handlers")
+func (s *server) signals(c chan os.Signal) {
 
-	// start server
-	log.Info("Accepting requests")
-
-	// inform supervisor that we are up
-
-	// for each request
-		// check authentication/authorization
-
-		// extract request operation
-
-		// extract request arguments
-
-		// pass operation and arguments to api.router
-
-			// find function mapped to operation
-
-			// call function with arguments
-
-		// return result to user
-
-
-	// close on signal
-	log.Info("Closing application")
+    _ = <-c
+    log.Info("closing ...")
+    s.closing = true
+    
+    // TODO: send notification to load balancing that this node is unavailable
+    
+    for {
+        if s.current_connections == 0 {
+            log.Info("bye ... :)")
+            os.Exit(1)
+        } else {
+            log.Info("waiting for %d opened connections", s.current_connections)
+            time.Sleep(500 * time.Millisecond)
+        }
+    }
 }
