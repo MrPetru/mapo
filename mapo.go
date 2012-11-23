@@ -23,6 +23,7 @@ import (
     "mapo/database"
     "mapo/managers/addon"
     "mapo/log"
+    "mapo/router"
     
     "net/http"
     "os"
@@ -30,82 +31,165 @@ import (
     "syscall"
     "sync"
     "time"
+    "fmt"
 )
 
+// la funzione main risponde del avvio del'applicazione e della sua
+// registrazione come server in ascolto su la rete.
 func main() {
 
-    log.SetLevel("INFO")
+    // settiamo il livello generale dei messaggi da visualizzare
+    log.SetLevel("DEBUG")
     
-    // create a new connection to database
+    // istruiamo la database di creare una nuova connessione.
+    //
+    // NOTE: metto alla valutazione il fatto che l'attivazione del dattabase
+    // deve 
     database.NewConnection()
     log.Msg("created a new database connection")
     
-    // register for all available addons
+    // al avvio del'applicazione si verifica la disponibilità dei addon
+    // e si crea una lista globale che sarà passata verso altri moduli
     addons := addon.GetAll()
     addons = addons
     log.Msg("load addons and generate a list")
     
-    // create and start a server http
+    // al momento del spegnimeto del'applicazione potremo trovarci con delle
+    // connessione attive dal parte del cliente. Il handler personalizzato usato
+    // qui, ci permette di dire al server di spegnersi ma prima deve aspettare
+    // che tutte le richieste siano processate e la connessione chiusa
+    h := new(handler)
+    // TODO: register this node to load balancing service
     c := make(chan os.Signal, 1)
     signal.Notify(c, syscall.SIGINT)//, syscall.SIGTERM)
     
-    s := new(server)
-    // TODO: register this node to load balancing service
-    go s.signals(c)
+    // aviamo in una nuova gorutine la funzione che ascoltera per il segnale di
+    // spegnimento del server
+    go h.getSignalAndClose(c)
     
     log.Info("start listening for requests")
-    log.Msg("close server with message: %v", http.ListenAndServe(":8081", s))
+    
+    // avviamo il server che processerà le richieste
+    log.Msg("close server with message: %v", http.ListenAndServe(":8081", h))
 }
 
-type server struct {
+// il handler personalizzato per il server http che ci permetterà di spegnere
+// l'applicazione senza rischi o corruzione dei dati.
+type handler struct {
+
+    // il numero delle connessione attive in questo momento
     current_connections int
     lock sync.Mutex
+    
+    // il server è o no in fase di chiusura
     closing bool
 }
 
-func (s *server) RequestHandler(out http.ResponseWriter, in *http.Request) {
+// RequestHandler processa in maniera separata ogni richiesta verso il server.
+// Questo è il primo passaggio che colleziona i dati della richiesta e li passa
+// al router. La risposta del router vera inviata al cliente ma prima
+// trasformerà il risultato il un formato conosciuto al cliente, es: json
+//
+// I dati che devono essere collezionati sono definiti nel router, in questa
+// funzione userà le apposite interfacce per passare i dati.
+// C'è da notare che anche i addon potranno richiedere dei dati personalizati
+// 
+// TODO: decidere se il processo di autenticazione deve essere qui o da un altra
+// parte
+func (h *handler) RequestHandler(out http.ResponseWriter, in *http.Request) {
 
     log.Msg("executing RequestHandler function")
+    
     // collect request data
+    routerData, err := router.New(in.Method, in.URL.Path)
+    if err != nil {
+        fmt.Fprint(out, err)
+    }
+    
+    in.ParseForm()
+    login, ok := in.Form["login"]
+    if ok {
+        routerData.SetUserLogin(login[0])
+        delete(in.Form, "login")
+    }
+    
+    password, ok := in.Form["password"]
+    if ok {
+        routerData.SetUserPassword(password[0])
+        delete(in.Form, "password")
+    }
+    
+    token, ok := in.Form["token"]
+    if ok {
+        routerData.SetUserToken(token[0])
+        delete(in.Form, "token")
+    }
+    
+    if len(in.Form) > 0 {
+        routerData.SetOtherValues(in.Form)
+    }
     
     // authenticate
+    ok = routerData.Authenticate()
+    if !ok {
+        log.Info("wrong authentication")
+    }
     
     // run router
+    result, err := routerData.Run()
+    
+    // convert data
     
     // send response to client
-}
-
-func (s *server) ServeHTTP(out http.ResponseWriter, in *http.Request) {
-    
-    if !s.closing {
-        s.lock.Lock()
-        s.current_connections++
-        s.lock.Unlock()
-        
-        defer func() {
-            s.lock.Lock()
-            s.current_connections--
-            s.lock.Unlock()
-        }()
-        
-        s.RequestHandler(out, in)
+    if err != nil {
+        fmt.Fprint(out, err)
+    } else {
+        fmt.Fprint(out, result)
     }
 }
 
-func (s *server) signals(c chan os.Signal) {
+// ServeHTTP e la funzione che vine eseguita come gorutine ogni volta che
+// si deve processare qualche richiesta. Questa funzione soltanto si assicura
+// che venga incrementato o decrementato il numero delle connessione attive e
+// avvierà la funzione RequestHandler che processerà la richiesta del cliente.
+// Comunque, il server http viene interrotto in maniera brutta ma senza alcun
+// rischio. TODO: approfondire questa feature se servirà.
+func (h *handler) ServeHTTP(out http.ResponseWriter, in *http.Request) {
+    
+    if !h.closing {
+        h.lock.Lock()
+        h.current_connections++
+        h.lock.Unlock()
+        
+        defer func() {
+            h.lock.Lock()
+            h.current_connections--
+            h.lock.Unlock()
+        }()
+        
+        h.RequestHandler(out, in)
+    }
+}
+
+// se viene richiesto che l'applicazione si deve chiudere, in questo momento si
+// parla del commando CTRL+C dal terminale, potremmo corrompere i dati a colpa
+// del'interruzione in maniera incorretta delle richieste in corso. La presente
+// Funzione sta in ascolto per il segnale SIGINT dopo di che si assicura che il
+// server venga chiuso non appena le connessione attive saranno zero.
+func (h *handler) getSignalAndClose(c chan os.Signal) {
 
     _ = <-c
     log.Info("closing ...")
-    s.closing = true
+    h.closing = true
     
     // TODO: send notification to load balancing that this node is unavailable
     
     for {
-        if s.current_connections == 0 {
+        if h.current_connections == 0 {
             log.Info("bye ... :)")
             os.Exit(1)
         } else {
-            log.Info("waiting for %d opened connections", s.current_connections)
+            log.Info("waiting for %d opened connections", h.current_connections)
             time.Sleep(500 * time.Millisecond)
         }
     }
