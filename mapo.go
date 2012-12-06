@@ -21,9 +21,9 @@ package main
 
 import (
     "mapo/database"
-    "mapo/managers/addon"
+    "mapo/addon"
     "mapo/log"
-    "mapo/router"
+    "mapo/core"
     
     "net/http"
     "os"
@@ -32,9 +32,11 @@ import (
     "sync"
     "time"
     "fmt"
+    "strings"
+    "encoding/json"
 )
 
-// la funzione main risponde del avvio del'applicazione e della sua
+// main risponde del avvio del'applicazione e della sua
 // registrazione come server in ascolto su la rete.
 func main() {
 
@@ -59,9 +61,11 @@ func main() {
     // qui, ci permette di dire al server di spegnersi ma prima deve aspettare
     // che tutte le richieste siano processate e la connessione chiusa
     h := new(handler)
-    // TODO: register this node to load balancing service
+    
+    // TODO: register this node to load-balancing service
+    
     c := make(chan os.Signal, 1)
-    signal.Notify(c, syscall.SIGINT)//, syscall.SIGTERM)
+    signal.Notify(c, syscall.SIGINT)
     
     // aviamo in una nuova gorutine la funzione che ascoltera per il segnale di
     // spegnimento del server
@@ -73,7 +77,7 @@ func main() {
     log.Msg("close server with message: %v", http.ListenAndServe(":8081", h))
 }
 
-// il handler personalizzato per il server http che ci permetterà di spegnere
+// handler, personalizzato per il server http che ci permetterà di spegnere
 // l'applicazione senza rischi o corruzione dei dati.
 type handler struct {
 
@@ -85,67 +89,55 @@ type handler struct {
     closing bool
 }
 
-// RequestHandler processa in maniera separata ogni richiesta verso il server.
-// Questo è il primo passaggio che colleziona i dati della richiesta e li passa
-// al router. La risposta del router vera inviata al cliente ma prima
-// trasformerà il risultato il un formato conosciuto al cliente, es: json
-//
-// I dati che devono essere collezionati sono definiti nel router, in questa
-// funzione userà le apposite interfacce per passare i dati.
-// C'è da notare che anche i addon potranno richiedere dei dati personalizati
-// 
-// TODO: decidere se il processo di autenticazione deve essere qui o da un altra
-// parte
+/*
+RequestHandler processa in maniera separata ogni richiesta verso il server.
+Questo è il primo passaggio che colleziona i dati della richiesta che poi
+vengono indirizzati verso il modulo giusto. La risposta del modulo vera inviata
+al cliente ma prima trasformerà il risultato il un formato conosciuto al cliente
+, es: json
+
+TODO: decidere se il processo di autenticazione deve essere qui o da un altra
+parte
+*/
 func (h *handler) RequestHandler(out http.ResponseWriter, in *http.Request) {
 
     log.Msg("executing RequestHandler function")
     
-    // collect request data
-    routerData, err := router.New(in.Method, in.URL.Path)
-    if err != nil {
-        fmt.Fprint(out, err)
-    }
-    
+    // i dati ottenuti dal ParseForm e ParseMultipartForm sono passati ai moduli
+    // specifici come core, api, webui.
+    // al momento la richiesta del utente può essere ridotta a una seria di dati del tipo
+    // chiave=valore, e una lista di file. I questa situazione i dati sono
+    // contenuti in una delle due variabile: in.Form e in.MultipartForm
     in.ParseForm()
-    login, ok := in.Form["login"]
-    if ok {
-        routerData.SetUserLogin(login[0])
-        delete(in.Form, "login")
+    in.ParseMultipartForm(0)
+    
+    // un passaggio importante qui è il modulo di autenticazione. Ogni richiesta
+    // passere prima una verifica del utente
+    // TODO: il modulo di autenticazione
+    
+    resourcePath := strings.Split(in.URL.Path, "/")
+    log.Debug("%s, %d", resourcePath, len(resourcePath))
+    
+    requestMethod := in.Method
+    
+    // Qui si identifica il modulo a cui li si deve passare il controllo.
+    switch m := resourcePath[1]; m {
+        case "admin":
+            result := core.Start(resourcePath[2:], requestMethod, in.Form)
+            jsonResult, _ := json.Marshal(result)
+            out.Header().Set("Content-Type","text/x-json")
+            fmt.Fprint(out, string(jsonResult))
+        case "api":
+            // avvia modulo api
+        case "webui":
+            // avvia modulo webui
+        default:
+            // probabilmente qui servirà un altro modulo o possiamo ritornare
+            // l'errore pagenotfound
+            http.Error(out, "404 page not found", http.StatusNotFound)
+            
     }
-    
-    password, ok := in.Form["password"]
-    if ok {
-        routerData.SetUserPassword(password[0])
-        delete(in.Form, "password")
-    }
-    
-    token, ok := in.Form["token"]
-    if ok {
-        routerData.SetUserToken(token[0])
-        delete(in.Form, "token")
-    }
-    
-    if len(in.Form) > 0 {
-        routerData.SetOtherValues(in.Form)
-    }
-    
-    // authenticate
-    ok = routerData.Authenticate()
-    if !ok {
-        log.Info("wrong authentication")
-    }
-    
-    // run router
-    result, err := routerData.Run()
-    
-    // convert data
-    
-    // send response to client
-    if err != nil {
-        fmt.Fprint(out, err)
-    } else {
-        fmt.Fprint(out, result)
-    }
+    return
 }
 
 // ServeHTTP e la funzione che vine eseguita come gorutine ogni volta che
