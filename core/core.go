@@ -106,6 +106,31 @@ func Start(resourcePath []string, requestMethod string, formValues map[string][]
             
         case "studio":
             // run studio functions
+            if requestMethod == "POST" {
+                switch l := len(resourcePath); l {
+                    case 1:
+                        // POST:/admin/studio   ->  create new studio
+                        studio := NewStudio(inValues)
+                        return studio
+                    case 2:
+                        // POST:/admin/studio/id    ->  update/edit studio
+                        studio := UpdateStudio(inValues)
+                        return studio
+                }
+            }
+            
+            if requestMethod == "GET" {
+                switch l := len(resourcePath); l {
+                    case 1:
+                        // GET:/admin/studio    ->  get all studios
+                        studios := GetStudioAll(inValues)
+                        return studios
+                    case 2:
+                        // GET:/admin/studio/id ->  get studio by id
+                        studio := GetStudio(inValues)
+                        return studio
+                }
+            }
             
         case "project":
             // run project functions
