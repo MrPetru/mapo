@@ -31,9 +31,9 @@ import (
     "syscall"
     "sync"
     "time"
-    "fmt"
+//    "fmt"
+    "regexp"
     "strings"
-    "encoding/json"
 )
 
 // main risponde del avvio del'applicazione e della sua
@@ -44,9 +44,6 @@ func main() {
     log.SetLevel("DEBUG")
     
     // istruiamo la database di creare una nuova connessione.
-    //
-    // NOTE: metto alla valutazione il fatto che l'attivazione del dattabase
-    // deve 
     database.NewConnection()
     log.Msg("created a new database connection")
     
@@ -60,7 +57,12 @@ func main() {
     // connessione attive dal parte del cliente. Il handler personalizzato usato
     // qui, ci permette di dire al server di spegnersi ma prima deve aspettare
     // che tutte le richieste siano processate e la connessione chiusa
-    h := new(handler)
+    mapoMuxer := NewMapoMux()
+    
+    server := &http.Server {
+        Addr:   ":8081",
+        Handler: mapoMuxer,
+    }
     
     // TODO: register this node to load-balancing service
     
@@ -69,17 +71,24 @@ func main() {
     
     // aviamo in una nuova gorutine la funzione che ascoltera per il segnale di
     // spegnimento del server
-    go h.getSignalAndClose(c)
+    go mapoMuxer.getSignalAndClose(c)
+
+    mapoMuxer.HandleFunc("POST", "/admin/user", core.NewUser)
+    mapoMuxer.HandleFunc("GET", "/admin/user/{id}", core.GetUser)
+    mapoMuxer.HandleFunc("GET", "/admin/user", core.GetUserAll)
     
     log.Info("start listening for requests")
     
     // avviamo il server che processerà le richieste
-    log.Msg("close server with message: %v", http.ListenAndServe(":8081", h))
+    log.Msg("close server with message: %v", server.ListenAndServe())
 }
 
 // handler, personalizzato per il server http che ci permetterà di spegnere
 // l'applicazione senza rischi o corruzione dei dati.
-type handler struct {
+type MapoMux struct {
+
+    mu sync.RWMutex
+    m map[string]Handler
 
     // il numero delle connessione attive in questo momento
     current_connections int
@@ -89,55 +98,65 @@ type handler struct {
     closing bool
 }
 
-/*
-RequestHandler processa in maniera separata ogni richiesta verso il server.
-Questo è il primo passaggio che colleziona i dati della richiesta che poi
-vengono indirizzati verso il modulo giusto. La risposta del modulo vera inviata
-al cliente ma prima trasformerà il risultato il un formato conosciuto al cliente
-, es: json
-
-TODO: decidere se il processo di autenticazione deve essere qui o da un altra
-parte
-*/
-func (h *handler) RequestHandler(out http.ResponseWriter, in *http.Request) {
-
-    log.Msg("executing RequestHandler function")
+func (mux *MapoMux) HandleFunc(method, Path string, handle func(http.ResponseWriter, *http.Request) ) {
+    // set a handler
     
-    // i dati ottenuti dal ParseForm e ParseMultipartForm sono passati ai moduli
-    // specifici come core, api, webui.
-    // al momento la richiesta del utente può essere ridotta a una seria di dati del tipo
-    // chiave=valore, e una lista di file. I questa situazione i dati sono
-    // contenuti in una delle due variabile: in.Form e in.MultipartForm
-    in.ParseForm()
-    in.ParseMultipartForm(0)
+    handlerFunc := new(http.HandlerFunc)
+    *handlerFunc = handle
     
-    // un passaggio importante qui è il modulo di autenticazione. Ogni richiesta
-    // passere prima una verifica del utente
-    // TODO: il modulo di autenticazione
+    newPath := "(?i)^"
     
-    resourcePath := strings.Split(in.URL.Path, "/")
-    log.Debug("%s, %d", resourcePath, len(resourcePath))
-    
-    requestMethod := in.Method
-    
-    // Qui si identifica il modulo a cui li si deve passare il controllo.
-    switch m := resourcePath[1]; m {
-        case "admin":
-            result := core.Start(resourcePath[2:], requestMethod, in.Form)
-            jsonResult, _ := json.Marshal(result)
-            out.Header().Set("Content-Type","text/x-json")
-            fmt.Fprint(out, string(jsonResult))
-        case "api":
-            // avvia modulo api
-        case "webui":
-            // avvia modulo webui
-        default:
-            // probabilmente qui servirà un altro modulo o possiamo ritornare
-            // l'errore pagenotfound
-            http.Error(out, "404 page not found", http.StatusNotFound)
-            
+    if method != "" {
+        newPath = newPath + method + ":/"
+    } else {
+        newPath = newPath + "(GET|POST)" + ":/"
     }
-    return
+    
+    pathVars := strings.Split(Path[1:], "/")
+    for _, v := range(pathVars) {
+        if v[0] == '{' {
+            newPath = newPath + "[0-9a-z_\\.\\+\\-]*/"
+        } else {
+            newPath = newPath + v + "/"
+        }
+    }
+    
+    mux.m[newPath] = handlerFunc
+}
+
+func (mux *MapoMux) match(r *http.Request) Handler {
+    method := r.Method
+    url := r.URL.Path
+    
+    if url[len(url)-1] != '/' {
+        url = url + "/"
+    }
+    
+    var handler Handler
+    
+    for k, v := range(mux.m) {
+        matching, _ := regexp.MatchString(k, method + ":" + url)
+        if matching {
+            handler = v
+            break
+        }
+    }
+    
+    if handler != nil {
+        return handler
+    }
+    return http.NotFoundHandler()
+}
+
+func NewMapoMux() *MapoMux {
+    mux := new(MapoMux)
+    mux.m = make(map[string]Handler, 0)
+    
+    return mux
+}
+
+type Handler interface {
+    ServeHTTP(http.ResponseWriter, *http.Request)
 }
 
 // ServeHTTP e la funzione che vine eseguita come gorutine ogni volta che
@@ -146,20 +165,25 @@ func (h *handler) RequestHandler(out http.ResponseWriter, in *http.Request) {
 // avvierà la funzione RequestHandler che processerà la richiesta del cliente.
 // Comunque, il server http viene interrotto in maniera brutta ma senza alcun
 // rischio. TODO: approfondire questa feature se servirà.
-func (h *handler) ServeHTTP(out http.ResponseWriter, in *http.Request) {
-    
-    if !h.closing {
-        h.lock.Lock()
-        h.current_connections++
-        h.lock.Unlock()
-        
+func (mux *MapoMux) ServeHTTP(out http.ResponseWriter, in *http.Request) {
+    if !mux.closing {
+        start := time.Now()
         defer func() {
-            h.lock.Lock()
-            h.current_connections--
-            h.lock.Unlock()
+            log.Info("time: %v for %s", time.Since(start), in.URL.Path)
         }()
         
-        h.RequestHandler(out, in)
+        mux.lock.Lock()
+        mux.current_connections++
+        mux.lock.Unlock()
+        
+        defer func() {
+            mux.lock.Lock()
+            mux.current_connections--
+            mux.lock.Unlock()
+        }()
+        
+        handle := mux.match(in)
+        handle.ServeHTTP(out, in)
     }
 }
 
@@ -168,20 +192,20 @@ func (h *handler) ServeHTTP(out http.ResponseWriter, in *http.Request) {
 // del'interruzione in maniera incorretta delle richieste in corso. La presente
 // Funzione sta in ascolto per il segnale SIGINT dopo di che si assicura che il
 // server venga chiuso non appena le connessione attive saranno zero.
-func (h *handler) getSignalAndClose(c chan os.Signal) {
+func (mux *MapoMux) getSignalAndClose(c chan os.Signal) {
 
     _ = <-c
     log.Info("closing ...")
-    h.closing = true
+    mux.closing = true
     
     // TODO: send notification to load balancing that this node is unavailable
     
     for {
-        if h.current_connections == 0 {
+        if mux.current_connections == 0 {
             log.Info("bye ... :)")
             os.Exit(1)
         } else {
-            log.Info("waiting for %d opened connections", h.current_connections)
+            log.Info("waiting for %d opened connections", mux.current_connections)
             time.Sleep(500 * time.Millisecond)
         }
     }

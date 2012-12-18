@@ -5,6 +5,9 @@ import (
     "mapo/database"
     
     "errors"
+    "fmt"
+    "strconv"
+//    "reflect"
 )
 
 // il contenitore base che si usa per transportare i dati di un utente verso
@@ -24,8 +27,25 @@ type user struct {
 // una lista di utenti
 type userList []user
 
-func (ul userList) Restore() {
+func (ul *userList) Restore() error {
     log.Debug("restored all users from database")
+    
+    err := database.RestoreList(ul)
+    
+    return err
+}
+
+func (ul userList) ToMap() []map[string]interface{} {
+    
+    return nil
+}
+
+func (ul *userList) FillWithResult(result []map[string]interface{}) {
+    for _, v := range(result) {
+        user := NewUser()
+        user.FillWithResult(v)
+        *ul = append(*ul, user)
+    }
 }
 
 func NewUser() user {
@@ -43,8 +63,13 @@ func NewUserList() userList {
     return ul
 }
 
-func (u *user) SetId(value string) {
+func (u *user) SetId(value string) error {
+    
+    if len(value) < 4 {
+        return errors.New("id: troppo corto")
+    }
     u.id = value
+    return nil
 }
 
 func (u *user) GetId() string {
@@ -76,11 +101,21 @@ func (u *user) SetPassword(value string) error {
     return nil
 }
 
+func (u *user) SetName(value string) error {
+    
+    if len(value) < 6 {
+        return errors.New("nome: troppo corto") 
+    }
+    
+    u.name = value
+    return nil
+}
+
 // Reastore interoga il database per le informazioni di un certo utente
 func (u *user) Restore() error {
     log.Debug("restoring user from database")
     
-    err := database.Restore(u)
+    err := database.RestoreOne(u)
     
     return err
 }
@@ -116,13 +151,31 @@ func (u user) ToMap() map[string]interface{} {
 
 func (u *user) FillWithResult(result map[string]interface{}) {
     //
-    u.id = result["id"].(string)
+    
+    tmp := make([]string, 0)
+    
+    if _, ok := result["id"]; ok {
+        u.id = result["id"].(string)
+    } else {
+        u.id = result["_id"].(string)
+    }
+    
     u.login = result["login"].(string)
     u.name = result["name"].(string)
-//    u.contacts = result["contacts"]
-    //log.Debug("%T\n", result["contacts"])
+
+    for _, v := range(result["contacts"].([]interface{})) {
+        tmp = append(tmp, fmt.Sprintf("%v", v))
+    }
+    u.contacts = tmp
+
     u.description = result["description"].(string)
-//    u.rating = result["rating"].(float32)
-//    studios []string
+    vfloat, _ := strconv.ParseFloat(fmt.Sprintf("%v",result["rating"]), 32)
+    u.rating = float32(vfloat)
+
+    tmp = make([]string, 0)
+    for _, v := range(result["studios"].([]interface{})) {
+        tmp = append(tmp, fmt.Sprintf("%v", v))
+    }
+    u.studios = tmp
 }
 

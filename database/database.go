@@ -6,6 +6,8 @@ import (
     "labix.org/v2/mgo"
     "labix.org/v2/mgo/bson"
     "errors"
+    
+    "fmt"
 )
 
 var dbSession *mgo.Session
@@ -18,7 +20,13 @@ type Storer interface {
     FillWithResult(map[string]interface{})
 }
 
-// TODO: definire una funzione che si ocupa con la rezione e gestione della
+type StorerList interface {
+    //ToStoreFormat() map[string]interface{}
+    ToMap() []map[string]interface{}
+    FillWithResult([]map[string]interface{})
+}
+
+// TODO: definire una funzione che si occupa con la creazione e gestione della
 // connessione verso un database.
 func NewConnection() {
     log.Debug("executing NewConnection function")
@@ -59,15 +67,18 @@ func Store(inData Storer) error {
     return nil
 }
 
-func Restore(inData Storer) error {
+func RestoreOne(inData Storer) error {
     // interroga la database per un oggetto che è descritto nel inData
+    
+    c := dbSession.DB("mapo").C("users")
+
+    fmt.Printf("solo un elemento\n")
+    
     object := inData.ToMap()
 
     object["_id"] = object["id"]
     
-    c := dbSession.DB("mapo").C("users")
-    
-    err := c.Find(bson.M{"_id": object["_id"]}).One(&object)
+    err := c.Find(bson.M{"_id": object["_id"]}).One(object)
     if err != nil {
         return err
     }
@@ -78,6 +89,26 @@ func Restore(inData Storer) error {
     inData.FillWithResult(object)
     
     log.Debug("restored %v", object )
+
+    return nil
+}
+
+func RestoreList(inData StorerList) error {
+    // interroga la database per un oggetto che è descritto nel inData
+    
+    c := dbSession.DB("mapo").C("users")
+
+    fmt.Printf("tanti elementi\n")
+    
+    object := make([]map[string]interface{}, 0)
+    
+    err := c.Find(bson.M{}).All(&object)
+    if err != nil {
+        return err
+    }
+    
+    inData.FillWithResult(object)
+
     return nil
 }
 
