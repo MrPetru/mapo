@@ -5,20 +5,16 @@ import (
     "mapo/objectspace"
     
     "net/http"
-    "fmt"
+    "strings"
+    "strconv"
+    
+    // utilizo di questo paccheto e soltanto temporaniamente
+    // per creare un id che poi avrà una funzione specifica
+    "labix.org/v2/mgo/bson"
 )
 
-/*
-TODO: dichiarere le interface da usare per user
-type SetterGetter interface {
-    SetLogin(string) error
-    GetLogin() string
-    ...
-}
-*/
-
-//NewUser crea un nuovo utente di mapo
-//func NewUser(inValues values) interface{} {
+// NewUser crea un nuovo utente di mapo
+// func NewUser(inValues values) interface{} {
 func NewUser(out http.ResponseWriter, in *http.Request) {
 
     log.Msg("executing NewUser function")
@@ -27,139 +23,155 @@ func NewUser(out http.ResponseWriter, in *http.Request) {
     // verrano inseriti nella database
     user := objectspace.NewUser()
     
-    errors := make(map[string][]string)
+    errors := NewCoreErr()
     
     in.ParseForm()
     
     login := ExtractSingleValue(in.Form, "login")
     err := user.SetLogin(login)
     if err != nil {
-        errors["login"] = append(errors["login"], err.Error())
+        errors.append("login", err.Error())
     }
     
     // verifica e inserimento della passowrd nel contenitore del utente
     password := ExtractSingleValue(in.Form, "password")
     err = user.SetPassword(password)
     if err != nil {
-        errors["password"] = append(errors["password"], err.Error())
+        errors.append("password", err.Error())
     }
     
     // get and set name
     name := ExtractSingleValue(in.Form, "name")
     err = user.SetName(name)
     if err != nil {
-        errors["name"] = append(errors["name"], err.Error())
+        errors.append("name", err.Error())
+    }
+    
+    //id := name + "_" + login
+    id := bson.NewObjectId().Hex()
+    err = user.SetId(id)
+    if err != nil {
+        errors.append("id", err.Error())
     }
     
     // TODO: tutte le altre operazioni per necesari per la registrazione utente
     
-    // se i dati in entratto sono considerati errati, esiste la chiave error
+    // se i dati in entratta sono considerati errati,
     // allora rimanda i dati indietro con l'errore
-    for _, _ = range(errors) {
-        fmt.Fprint(out, errors)
-        delete(in.Form, "password")
-        fmt.Fprint(out, in.Form)
+    if len(errors) > 0 {
+        WriteJsonResult(out, errors, "error")
         return
     }
-    
-    user.SetId(user.GetLogin())
     
     // se i dati in entrata sono stati accetati allora slava l'utente
     err = user.Save()
     if err != nil {
-        errors["on save"] = append(errors["on save"], err.Error())
-        fmt.Fprint(out, errors)
-        delete(in.Form, "password")
-        fmt.Fprint(out, in.Form)
+        errors.append("on save", "data base error")
+        log.Debug("%v", err)
+        WriteJsonResult(out, errors, "error")
         return
     }
     
-    // trasforma l'utente in un ogetto più dinamico
-    userMap := user.ToMap()
-    
-    // escludiamo il password dal resultato che verà ristituita al cliente
-    delete(userMap, "password")
-    
-    // ritorna i dati che sono stati salvati nella database
-    fmt.Fprint(out, userMap)
+    WriteJsonResult(out, user, "ok")
 }
 
 
-//// UpdateUser aggiorna il valori di un utenti nella database
-//func UpdateUser(inValues values) interface{} {
-//    log.Msg("executing UpdateUser function")
-//    
-//    user := objectspace.NewUser()
-//    id, err := inValues.GetSingleValue("id")
-//    if err != nil {
-//        inValues.SetError(err)
-//        return inValues
-//    }
-//    
-//    user.SetId(id)
-//    err = user.Restore()
-//    if err != nil {
-//        inValues.SetError(err)
-//    }
-//    
-//    // update values for user
-//    // name
-//    // contacts
-//    // ...
-//    
-//    user.SaveUpdate()
-//    return user
-//}
+// UpdateUser aggiorna il valori di un utenti nella database
+func UpdateUser(out http.ResponseWriter, in *http.Request) {
+    log.Msg("executing UpdateUser function")
+    
+    in.ParseForm()
+    errors := NewCoreErr()
+    
+    user := objectspace.NewUser()
+
+    id := strings.Split(in.URL.Path[1:], "/")[2]
+    err := user.SetId(id)
+    if err != nil {
+        errors.append("id", err.Error())
+    }
+    
+    // oteniamo il utende dal database che poi vera aggiornato
+    err = user.Restore()
+    if err != nil {
+        errors.append("on restore", err.Error())
+        WriteJsonResult(out, errors, "error")
+        return
+    }
+    
+    // aggiorniamo il valore del rating del utente
+    strRating := ExtractSingleValue(in.Form, "rating")
+    if len(strRating) > 0 {
+        intRating, err := strconv.Atoi(strRating)
+        if err != nil {
+            errors.append("rating", err.Error())
+        } else {
+            err = user.SetRating(intRating)
+            if err != nil {
+                errors.append("rating", err.Error())
+            }
+        }
+    }
+    
+    
+    // update values for user
+    // name
+    // contacts
+    // ...
+    
+    if len(errors) > 0 {
+        WriteJsonResult(out, errors, "error")
+        return
+    }
+    
+    err = user.Update()
+    if err != nil {
+        errors.append("on update", err.Error())
+        WriteJsonResult(out, errors, "error")
+        return
+    }
+    
+    WriteJsonResult(out, user, "ok")
+}
 
 // GetUser restituisce un utente che è gia salvato nella database
-//func GetUser(inValues values) interface{} {
+// func GetUser(inValues values) interface{} {
 func GetUser(out http.ResponseWriter, in *http.Request) {
 
     log.Msg("executing GetUser function")
     
     in.ParseForm()
     
-    errors := make(map[string][]string)
+    errors := NewCoreErr()
     
     // cearmo un nuovo ogetto/contenitore per il utente richiesto
     user := objectspace.NewUser()
     
     // aggiorniamo il valore del id del utente, che servirà per ricavare l'utente
     // dal database
-    id := ExtractSingleValue(in.Form, "id")
+    id := strings.Split(in.URL.Path[1:], "/")[2]
     err := user.SetId(id)
     if err != nil {
-        errors["id"] = append(errors["id"], err.Error())
+        errors.append("id", err.Error())
     }
     
-    for _, _ = range(errors) {
-        fmt.Fprint(out, errors)
-        delete(in.Form, "password")
-        fmt.Fprint(out, in.Form)
+    // fermiamo l'esecuzione se fino a questo momento abbiamo incontrato qualche errore
+    if len(errors) > 0{
+        WriteJsonResult(out, errors, "error")
         return
     }
     
     // ricavare i dati del utente dalla database
     err = user.Restore()
     if err != nil {
-        errors["on restore"] = append(errors["on restore"], err.Error())
-        fmt.Fprint(out, errors)
-        delete(in.Form, "password")
-        fmt.Fprint(out, in.Form)
+        errors.append("on restore", "data base error")
+        WriteJsonResult(out, errors, "error")
+        return
     }
     
     log.Debug("%s", user.GetId())
-    
-    // transformiamo tutto in un tipo di dato simile a quello in entrata
-    // se anche non necessario, questa operazione rende più uniforma l'interazione
-    // tra il module superiore è questo.
-    userMap := user.ToMap()
-    
-    // canceliamo la password dal oggetto ritornato al client
-    // questo dato non serve per cliente
-    delete(userMap, "password")
-    
-    fmt.Fprint(out, userMap)
+
+    WriteJsonResult(out, user, "ok")
 }
 
 // GetUserAll restituisce una lista di tutti utenti nel database
@@ -168,14 +180,14 @@ func GetUserAll(out http.ResponseWriter, in *http.Request){
     log.Msg("executing GetUserAll function")
     
     userList := objectspace.NewUserList()
-    userList.Restore()
     
-    userMapList := make([]map[string]interface{}, 0)
-    
-    for _, u := range(userList) {
-        userMap := u.ToMap()
-        userMapList = append(userMapList, userMap)
+    err := userList.Restore()
+    if err != nil {
+        errors := make(map[string][]string)
+        errors["on restore"] = append(errors["on restore"], err.Error())
+        WriteJsonResult(out, errors, "error")
+        return
     }
-    
-    fmt.Fprint(out, userMapList)
+
+    WriteJsonResult(out, userList, "ok")
 }

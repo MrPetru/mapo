@@ -29,11 +29,6 @@ import (
     "os"
     "os/signal"
     "syscall"
-    "sync"
-    "time"
-//    "fmt"
-    "regexp"
-    "strings"
 )
 
 // main risponde del avvio del'applicazione e della sua
@@ -44,24 +39,29 @@ func main() {
     log.SetLevel("DEBUG")
     
     // istruiamo la database di creare una nuova connessione.
-    database.NewConnection()
+    // specificandoli a quale database si deve collegare
+    database.NewConnection("mapo")
     log.Msg("created a new database connection")
     
     // al avvio del'applicazione si verifica la disponibilità dei addon
     // e si crea una lista globale che sarà passata verso altri moduli
+    // TODO: modulo addon ancora da implementare
     addons := addon.GetAll()
     addons = addons
     log.Msg("load addons and generate a list")
     
-    // al momento del spegnimeto del'applicazione potremo trovarci con delle
+    // al momento del spegnimento del'applicazione potremo trovarci con delle
     // connessione attive dal parte del cliente. Il handler personalizzato usato
     // qui, ci permette di dire al server di spegnersi ma prima deve aspettare
-    // che tutte le richieste siano processate e la connessione chiusa
-    mapoMuxer := NewMapoMux()
+    // che tutte le richieste siano processate e la connessione chiusa.
+    //
+    // Oltre al spegnimento sicuro il ServeMux permette di registra dei nuovi
+    // handler usando come descrizione anche il metodo http tipo GET o POST.
+    muxer := NewServeMux()
     
     server := &http.Server {
         Addr:   ":8081",
-        Handler: mapoMuxer,
+        Handler: muxer,
     }
     
     // TODO: register this node to load-balancing service
@@ -71,11 +71,12 @@ func main() {
     
     // aviamo in una nuova gorutine la funzione che ascoltera per il segnale di
     // spegnimento del server
-    go mapoMuxer.getSignalAndClose(c)
+    go muxer.getSignalAndClose(c)
 
-    mapoMuxer.HandleFunc("POST", "/admin/user", core.NewUser)
-    mapoMuxer.HandleFunc("GET", "/admin/user/{id}", core.GetUser)
-    mapoMuxer.HandleFunc("GET", "/admin/user", core.GetUserAll)
+    muxer.HandleFunc("POST", "/admin/user", core.NewUser)
+    muxer.HandleFunc("GET", "/admin/user/{id}", core.GetUser)
+    muxer.HandleFunc("GET", "/admin/user", core.GetUserAll)
+    muxer.HandleFunc("POST", "/admin/user/{id}", core.UpdateUser)
     
     log.Info("start listening for requests")
     
@@ -83,130 +84,4 @@ func main() {
     log.Msg("close server with message: %v", server.ListenAndServe())
 }
 
-// handler, personalizzato per il server http che ci permetterà di spegnere
-// l'applicazione senza rischi o corruzione dei dati.
-type MapoMux struct {
 
-    mu sync.RWMutex
-    m map[string]Handler
-
-    // il numero delle connessione attive in questo momento
-    current_connections int
-    lock sync.Mutex
-    
-    // il server è o no in fase di chiusura
-    closing bool
-}
-
-func (mux *MapoMux) HandleFunc(method, Path string, handle func(http.ResponseWriter, *http.Request) ) {
-    // set a handler
-    
-    handlerFunc := new(http.HandlerFunc)
-    *handlerFunc = handle
-    
-    newPath := "(?i)^"
-    
-    if method != "" {
-        newPath = newPath + method + ":/"
-    } else {
-        newPath = newPath + "(GET|POST)" + ":/"
-    }
-    
-    pathVars := strings.Split(Path[1:], "/")
-    for _, v := range(pathVars) {
-        if v[0] == '{' {
-            newPath = newPath + "[0-9a-z_\\.\\+\\-]*/"
-        } else {
-            newPath = newPath + v + "/"
-        }
-    }
-    
-    mux.m[newPath] = handlerFunc
-}
-
-func (mux *MapoMux) match(r *http.Request) Handler {
-    method := r.Method
-    url := r.URL.Path
-    
-    if url[len(url)-1] != '/' {
-        url = url + "/"
-    }
-    
-    var handler Handler
-    
-    for k, v := range(mux.m) {
-        matching, _ := regexp.MatchString(k, method + ":" + url)
-        if matching {
-            handler = v
-            break
-        }
-    }
-    
-    if handler != nil {
-        return handler
-    }
-    return http.NotFoundHandler()
-}
-
-func NewMapoMux() *MapoMux {
-    mux := new(MapoMux)
-    mux.m = make(map[string]Handler, 0)
-    
-    return mux
-}
-
-type Handler interface {
-    ServeHTTP(http.ResponseWriter, *http.Request)
-}
-
-// ServeHTTP e la funzione che vine eseguita come gorutine ogni volta che
-// si deve processare qualche richiesta. Questa funzione soltanto si assicura
-// che venga incrementato o decrementato il numero delle connessione attive e
-// avvierà la funzione RequestHandler che processerà la richiesta del cliente.
-// Comunque, il server http viene interrotto in maniera brutta ma senza alcun
-// rischio. TODO: approfondire questa feature se servirà.
-func (mux *MapoMux) ServeHTTP(out http.ResponseWriter, in *http.Request) {
-    if !mux.closing {
-        start := time.Now()
-        defer func() {
-            log.Info("time: %v for %s", time.Since(start), in.URL.Path)
-        }()
-        
-        mux.lock.Lock()
-        mux.current_connections++
-        mux.lock.Unlock()
-        
-        defer func() {
-            mux.lock.Lock()
-            mux.current_connections--
-            mux.lock.Unlock()
-        }()
-        
-        handle := mux.match(in)
-        handle.ServeHTTP(out, in)
-    }
-}
-
-// se viene richiesto che l'applicazione si deve chiudere, in questo momento si
-// parla del commando CTRL+C dal terminale, potremmo corrompere i dati a colpa
-// del'interruzione in maniera incorretta delle richieste in corso. La presente
-// Funzione sta in ascolto per il segnale SIGINT dopo di che si assicura che il
-// server venga chiuso non appena le connessione attive saranno zero.
-func (mux *MapoMux) getSignalAndClose(c chan os.Signal) {
-
-    _ = <-c
-    log.Info("closing ...")
-    mux.closing = true
-    
-    // TODO: send notification to load balancing that this node is unavailable
-    
-    for {
-        if mux.current_connections == 0 {
-            log.Info("bye ... :)")
-            os.Exit(1)
-        } else {
-            log.Info("waiting for %d opened connections", mux.current_connections)
-            time.Sleep(500 * time.Millisecond)
-        }
-    }
-}

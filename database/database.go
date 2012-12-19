@@ -5,30 +5,14 @@ import (
     
     "labix.org/v2/mgo"
     "labix.org/v2/mgo/bson"
-    "errors"
-    
     "fmt"
 )
 
-var dbSession *mgo.Session
-
-// TODO: c'è bisogno di una funzione che faccia il lavoro inverso. trasforma da un
-// formatto adatto per database in un formatto di lavoro per mapo.
-type Storer interface {
-    //ToStoreFormat() map[string]interface{}
-    ToMap() map[string]interface{}
-    FillWithResult(map[string]interface{})
-}
-
-type StorerList interface {
-    //ToStoreFormat() map[string]interface{}
-    ToMap() []map[string]interface{}
-    FillWithResult([]map[string]interface{})
-}
+var database *mgo.Database
 
 // TODO: definire una funzione che si occupa con la creazione e gestione della
 // connessione verso un database.
-func NewConnection() {
+func NewConnection(databaseName string) {
     log.Debug("executing NewConnection function")
     
     session, err := mgo.Dial("localhost")
@@ -36,85 +20,48 @@ func NewConnection() {
         panic(err)
     }
     
-    dbSession = session
+    database = session.DB(databaseName)
     
     // connessione alla data base avvenne usando diversi livelli di autenticazione
     // come admin, user, ... e probabile altri?
 }
 
-func Store(inData Storer) error {
-    // store a object to database
-    object := inData.ToMap()
+// Store salva nella database un singolo oggetto
+func Store(data interface{}, table string) error {
     
-    object["_id"] = object["id"]
-    delete(object, "id")
+    c := database.C(table)
     
-    id, _ := object["_id"]
-    idStr := id.(string)
+    err := c.Insert(data)
     
-    if len(idStr) < 1 {
-        return errors.New("no id was submited")
-    }
-    
-    c := dbSession.DB("mapo").C("users")
-    
-    err := c.Insert(&object)
-    if err != nil {
-            return err
-    }
-    
-    log.Debug("stored %v", object )
-    return nil
+    return err
 }
 
-func RestoreOne(inData Storer) error {
-    // interroga la database per un oggetto che è descritto nel inData
+// RestoreOne riprende dalla database un singolo oggetto identificato da un id
+func RestoreOne(data interface{}, id string, table string) error {
     
-    c := dbSession.DB("mapo").C("users")
-
-    fmt.Printf("solo un elemento\n")
+    c := database.C(table)
     
-    object := inData.ToMap()
-
-    object["_id"] = object["id"]
+    err := c.Find(bson.M{"_id" : id}).One(data)
     
-    err := c.Find(bson.M{"_id": object["_id"]}).One(object)
-    if err != nil {
-        return err
-    }
-    
-    object["id"] = object["_id"]
-    delete(object, "_id")
-    
-    inData.FillWithResult(object)
-    
-    log.Debug("restored %v", object )
-
-    return nil
+    return err
 }
 
-func RestoreList(inData StorerList) error {
-    // interroga la database per un oggetto che è descritto nel inData
+// RestoreList riprende dalla database una lista (tutti) di oggetti, senza alcun filtro
+func RestoreList(data interface{}, table string) error {
     
-    c := dbSession.DB("mapo").C("users")
-
-    fmt.Printf("tanti elementi\n")
+    c := database.C(table)
     
-    object := make([]map[string]interface{}, 0)
+    err := c.Find(bson.M{}).All(data)
     
-    err := c.Find(bson.M{}).All(&object)
-    if err != nil {
-        return err
-    }
-    
-    inData.FillWithResult(object)
-
-    return nil
+    return err
 }
 
-func Update(inData Storer) {
-    // store a object to database
-    object := inData.ToMap()
+// Update aggiorna i valori di un oggetto nella database, identificato da un id
+func Update(data interface{}, id string, table string) error {
     
-    log.Debug("updated %v", object )
+    c := database.C(table)
+    
+    err := c.Update(bson.M{"_id": id}, data)
+    
+    return err
 }
