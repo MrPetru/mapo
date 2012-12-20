@@ -17,6 +17,8 @@ type ServeMux struct {
 
     // lista dei handler registrati
     m map[string]Handler
+    
+    authenticator func(http.ResponseWriter, *http.Request) (http.ResponseWriter, *http.Request, bool)
 
     // il numero delle connessione attive in questo momento
     current_connections int
@@ -26,11 +28,51 @@ type ServeMux struct {
     closing bool
 }
 
+type handlerWithAuthentication struct {
+    f func(http.ResponseWriter, *http.Request)
+    auth func(http.ResponseWriter, *http.Request) (http.ResponseWriter, *http.Request, bool)
+}
+func (hwa handlerWithAuthentication) ServeHTTP(out http.ResponseWriter, in *http.Request) {
+    if hwa.auth != nil {
+        if o, i, ok := hwa.auth(out, in); ok {
+            hwa.f(o, i)
+        }
+    } else {
+        hwa.f(out, in)
+    }
+}
+
+type handlerWithoutAuthentication func(http.ResponseWriter, *http.Request)
+func (hwoa handlerWithoutAuthentication) ServeHTTP(out http.ResponseWriter, in *http.Request) {
+    hwoa(out, in)
+}
+
+func (mux *ServeMux) SetAuthenticator(auth func(http.ResponseWriter, *http.Request) (http.ResponseWriter, *http.Request, bool)) {
+    mux.authenticator = auth
+}
+
 func (mux *ServeMux) HandleFunc(method, path string, handle func(http.ResponseWriter, *http.Request) ) {
+
+    handlerFunc := new(handlerWithAuthentication)
+    handlerFunc.auth = mux.authenticator
+    handlerFunc.f = handle
+
+    pattern := createPattern(method, path)
     
-    handlerFunc := new(http.HandlerFunc)
+    mux.m[pattern] = handlerFunc
+}
+
+func (mux *ServeMux) HandleFuncNoAuth(method, path string, handle func(http.ResponseWriter, *http.Request) ) {
+
+    handlerFunc := new(handlerWithoutAuthentication)
     *handlerFunc = handle
+
+    pattern := createPattern(method, path)
     
+    mux.m[pattern] = handlerFunc
+}
+
+func createPattern(method, path string) string {
     pattern := "(?i)^"
     
     if method != "" {
@@ -39,17 +81,19 @@ func (mux *ServeMux) HandleFunc(method, path string, handle func(http.ResponseWr
         pattern = pattern + "(GET|POST)" + ":/"
     }
     
-    pathSlice := strings.Split(path[1:], "/")
-    for _, v := range(pathSlice) {
-        if v[0] == '{' {
-            pattern = pattern + "[0-9a-z_\\ \\.\\+\\-]*/"
-        } else {
-            pattern = pattern + v + "/"
+    if len(path) > 1 {
+        pathSlice := strings.Split(path[1:], "/")
+        for _, v := range(pathSlice) {
+            if v[0] == '{' {
+                pattern = pattern + "[0-9a-z_\\ \\.\\+\\-]*/"
+            } else {
+                pattern = pattern + v + "/"
+            }
         }
     }
     pattern = pattern + "$"
     
-    mux.m[pattern] = handlerFunc
+    return pattern
 }
 
 func (mux *ServeMux) match(r *http.Request) Handler {

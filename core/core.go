@@ -63,3 +63,10 @@ func (ce *coreErr) append(key string, err error) {
     }
 }
 
+func Authenticator(out http.ResponseWriter, in *http.Request) (http.ResponseWriter, *http.Request, bool) {
+
+    fmt.Printf("authenticate for %v\n", in.URL.Path)
+    
+    return out, in, false
+}
+

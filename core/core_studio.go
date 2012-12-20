@@ -23,21 +23,20 @@ func NewStudio(out http.ResponseWriter, in *http.Request) {
     
     name := ExtractSingleValue(in.Form, "name")
     err := studio.SetName(name)
-    if err != nil {
-        errors.append("name", err)
-    }
+    errors.append("name", err)
     
     userid := ExtractSingleValue(in.Form, "userid")
     err = studio.SetUserid(userid)
-    if err != nil {
-        errors.append("userid", err)
-    }
+    errors.append("userid", err)
     
     id := name
     err = studio.SetId(id)
-    if err != nil {
-        errors.append("id", err)
-    }
+    errors.append("id", err)
+    
+    // update user
+    user := objectspace.NewUser()
+    err = user.SetId(userid)
+    errors.append("userid", err)
     
     if len(errors) > 0 {
         WriteJsonResult(out, errors, "error")
@@ -49,13 +48,6 @@ func NewStudio(out http.ResponseWriter, in *http.Request) {
         errors.append("on store", err)
         WriteJsonResult(out, errors, "error")
         return
-    }
-    
-    // update user
-    user := objectspace.NewUser()
-    err = user.SetId(userid)
-    if err != nil {
-        errors.append("userid", err)
     }
     
     err = user.Restore()
