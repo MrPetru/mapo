@@ -49,7 +49,7 @@ func NewUser() user {
 
 func (u *user) SetId(value string) error {
     
-    if len(value) < 4 {
+    if len(value) < 24 {
         return errors.New("troppo corto")
     }
     u.Id = value
@@ -101,6 +101,15 @@ func (u *user) SetRating(value int) error {
     }
     
     u.Rating = value
+    return nil
+}
+
+func (u *user) AppendStudioId(value string) error {
+    if len(value) < 4 {
+        return errors.New("tropo corto")
+    }
+    
+    u.Studios = append(u.Studios, value)
     return nil
 }
 

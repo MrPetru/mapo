@@ -30,28 +30,27 @@ func NewUser(out http.ResponseWriter, in *http.Request) {
     login := ExtractSingleValue(in.Form, "login")
     err := user.SetLogin(login)
     if err != nil {
-        errors.append("login", err.Error())
+        errors.append("login", err)
     }
     
     // verifica e inserimento della passowrd nel contenitore del utente
     password := ExtractSingleValue(in.Form, "password")
     err = user.SetPassword(password)
     if err != nil {
-        errors.append("password", err.Error())
+        errors.append("password", err)
     }
     
     // get and set name
     name := ExtractSingleValue(in.Form, "name")
     err = user.SetName(name)
     if err != nil {
-        errors.append("name", err.Error())
+        errors.append("name", err)
     }
-    
-    //id := name + "_" + login
+
     id := bson.NewObjectId().Hex()
     err = user.SetId(id)
     if err != nil {
-        errors.append("id", err.Error())
+        errors.append("id", err)
     }
     
     // TODO: tutte le altre operazioni per necesari per la registrazione utente
@@ -66,7 +65,7 @@ func NewUser(out http.ResponseWriter, in *http.Request) {
     // se i dati in entrata sono stati accetati allora slava l'utente
     err = user.Save()
     if err != nil {
-        errors.append("on save", "data base error")
+        errors.append("on save", err)
         log.Debug("%v", err)
         WriteJsonResult(out, errors, "error")
         return
@@ -88,13 +87,13 @@ func UpdateUser(out http.ResponseWriter, in *http.Request) {
     id := strings.Split(in.URL.Path[1:], "/")[2]
     err := user.SetId(id)
     if err != nil {
-        errors.append("id", err.Error())
+        errors.append("id", err)
     }
     
     // oteniamo il utende dal database che poi vera aggiornato
     err = user.Restore()
     if err != nil {
-        errors.append("on restore", err.Error())
+        errors.append("on restore", err)
         WriteJsonResult(out, errors, "error")
         return
     }
@@ -104,11 +103,11 @@ func UpdateUser(out http.ResponseWriter, in *http.Request) {
     if len(strRating) > 0 {
         intRating, err := strconv.Atoi(strRating)
         if err != nil {
-            errors.append("rating", err.Error())
+            errors.append("rating", err)
         } else {
             err = user.SetRating(intRating)
             if err != nil {
-                errors.append("rating", err.Error())
+                errors.append("rating", err)
             }
         }
     }
@@ -126,7 +125,7 @@ func UpdateUser(out http.ResponseWriter, in *http.Request) {
     
     err = user.Update()
     if err != nil {
-        errors.append("on update", err.Error())
+        errors.append("on update", err)
         WriteJsonResult(out, errors, "error")
         return
     }
@@ -152,7 +151,7 @@ func GetUser(out http.ResponseWriter, in *http.Request) {
     id := strings.Split(in.URL.Path[1:], "/")[2]
     err := user.SetId(id)
     if err != nil {
-        errors.append("id", err.Error())
+        errors.append("id", err)
     }
     
     // fermiamo l'esecuzione se fino a questo momento abbiamo incontrato qualche errore
@@ -164,7 +163,7 @@ func GetUser(out http.ResponseWriter, in *http.Request) {
     // ricavare i dati del utente dalla database
     err = user.Restore()
     if err != nil {
-        errors.append("on restore", "data base error")
+        errors.append("on restore", err)
         WriteJsonResult(out, errors, "error")
         return
     }
@@ -183,8 +182,8 @@ func GetUserAll(out http.ResponseWriter, in *http.Request){
     
     err := userList.Restore()
     if err != nil {
-        errors := make(map[string][]string)
-        errors["on restore"] = append(errors["on restore"], err.Error())
+        errors := NewCoreErr()
+        errors.append("on restore", err)
         WriteJsonResult(out, errors, "error")
         return
     }

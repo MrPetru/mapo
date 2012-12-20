@@ -57,6 +57,9 @@ func NewCoreErr() coreErr{
 }
 
 // append aggiunge una nuovo elemento alla lista di errori per una chiave specifica.
-func (ce *coreErr) append(key, value string) {
-    (*ce)[key] = append((*ce)[key], value)
+func (ce *coreErr) append(key string, err error) {
+    if err != nil {
+        (*ce)[key] = append((*ce)[key], err.Error())
+    }
 }
+

@@ -78,6 +78,8 @@ func main() {
     muxer.HandleFunc("GET", "/admin/user", core.GetUserAll)
     muxer.HandleFunc("POST", "/admin/user/{id}", core.UpdateUser)
     
+    muxer.HandleFunc("POST", "/admin/studio", core.NewStudio)
+    
     log.Info("start listening for requests")
     
     // avviamo il server che processerà le richieste
