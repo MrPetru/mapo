@@ -5,7 +5,6 @@ import (
     
     "labix.org/v2/mgo"
     "labix.org/v2/mgo/bson"
-    "fmt"
 )
 
 var database *mgo.Database
