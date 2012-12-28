@@ -2,7 +2,7 @@ package main
 
 import (
     "mapo/log"
-    
+
     "os"
     "sync"
     "time"
@@ -17,13 +17,13 @@ type ServeMux struct {
 
     // lista dei handler registrati
     m map[string]Handler
-    
+
     authenticator func(http.ResponseWriter, *http.Request) (http.ResponseWriter, *http.Request, bool)
 
     // il numero delle connessione attive in questo momento
     current_connections int
     lock sync.Mutex
-    
+
     // il server è o no in fase di chiusura
     closing bool
 }
@@ -58,7 +58,7 @@ func (mux *ServeMux) HandleFunc(method, path string, handle func(http.ResponseWr
     handlerFunc.f = handle
 
     pattern := createPattern(method, path)
-    
+
     mux.m[pattern] = handlerFunc
 }
 
@@ -68,19 +68,19 @@ func (mux *ServeMux) HandleFuncNoAuth(method, path string, handle func(http.Resp
     *handlerFunc = handle
 
     pattern := createPattern(method, path)
-    
+
     mux.m[pattern] = handlerFunc
 }
 
 func createPattern(method, path string) string {
     pattern := "(?i)^"
-    
+
     if method != "" {
         pattern = pattern + method + ":/"
     } else {
         pattern = pattern + "(GET|POST)" + ":/"
     }
-    
+
     if len(path) > 1 {
         pathSlice := strings.Split(path[1:], "/")
         for _, v := range(pathSlice) {
@@ -92,20 +92,20 @@ func createPattern(method, path string) string {
         }
     }
     pattern = pattern + "$"
-    
+
     return pattern
 }
 
 func (mux *ServeMux) match(r *http.Request) Handler {
     method := r.Method
     url := r.URL.Path
-    
+
     if url[len(url)-1] != '/' {
         url = url + "/"
     }
-    
+
     var handler Handler
-    
+
     for k, v := range(mux.m) {
         matching, _ := regexp.MatchString(k, method + ":" + url)
         if matching {
@@ -113,7 +113,7 @@ func (mux *ServeMux) match(r *http.Request) Handler {
             break
         }
     }
-    
+
     if handler != nil {
         return handler
     }
@@ -123,7 +123,7 @@ func (mux *ServeMux) match(r *http.Request) Handler {
 func NewServeMux() *ServeMux {
     mux := new(ServeMux)
     mux.m = make(map[string]Handler, 0)
-    
+
     return mux
 }
 
@@ -143,17 +143,17 @@ func (mux *ServeMux) ServeHTTP(out http.ResponseWriter, in *http.Request) {
         defer func() {
             log.Info("time: %v for %s", time.Since(start), in.URL.Path)
         }()
-        
+
         mux.lock.Lock()
         mux.current_connections++
         mux.lock.Unlock()
-        
+
         defer func() {
             mux.lock.Lock()
             mux.current_connections--
             mux.lock.Unlock()
         }()
-        
+
         handle := mux.match(in)
         handle.ServeHTTP(out, in)
     }
@@ -169,9 +169,9 @@ func (mux *ServeMux) getSignalAndClose(c chan os.Signal) {
     _ = <-c
     log.Info("closing ...")
     mux.closing = true
-    
+
     // TODO: send notification to load balancing that this node is unavailable
-    
+
     for {
         if mux.current_connections == 0 {
             log.Info("bye ... :)")

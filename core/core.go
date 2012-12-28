@@ -7,25 +7,25 @@ import (
 )
 
 // ExtractSingleValue è una funzione che aiuta a prendere un singolo valore
-// dalla mappa di valori della forma.
+// dalla mappa di valori della forma (in.Form per esempio).
 func ExtractSingleValue(data map[string][]string, name string) string {
     v, ok := data[name]
     if !ok {
         return ""
     }
-    
+
     if len(v) < 1 {
         return ""
     }
-    
+
     if len(v) > 1 {
         return ""
     }
-    
+
     return v[0]
 }
 
-// statusResult aiuta a formattare i dati in uscita
+// statusResult aiuta a formattare i dati inviati verso il cliente
 type statusResult struct {
     Status string `json:"status"`
     Data interface{} `json:"data"`
@@ -37,13 +37,12 @@ func WriteJsonResult(out http.ResponseWriter, data interface{}, status string) {
 
     result := new(statusResult)
 
-    // else send the result
     result.Status = status
     result.Data = data
-    
+
     jsonResult, _ := json.Marshal(result)
 
-    out.Header().Set("Content-Type","text/x-json")
+    out.Header().Set("Content-Type","application/json")
     fmt.Fprint(out, string(jsonResult))
 }
 
@@ -57,16 +56,17 @@ func NewCoreErr() coreErr{
 }
 
 // append aggiunge una nuovo elemento alla lista di errori per una chiave specifica.
-func (ce *coreErr) append(key string, err error) {
-    if err != nil {
-        (*ce)[key] = append((*ce)[key], err.Error())
+func (ce *coreErr) append(key string, err interface{}) {
+    if err == nil {
+        return
     }
-}
 
-func Authenticator(out http.ResponseWriter, in *http.Request) (http.ResponseWriter, *http.Request, bool) {
-
-    fmt.Printf("authenticate for %v\n", in.URL.Path)
-    
-    return out, in, false
+    if e, ok := err.(error); ok {
+        if e != nil {
+            (*ce)[key] = append((*ce)[key], e.Error())
+        }
+    } else {
+        (*ce)[key] = append((*ce)[key], err.(string))
+    }
 }
 

@@ -3,13 +3,11 @@ package core
 import (
     "mapo/log"
     "mapo/objectspace"
-    
+
     "net/http"
     "strings"
     "strconv"
-    
-    // utilizo di questo paccheto e soltanto temporaniamente
-    // per creare un id che poi avrà una funzione specifica
+
     "labix.org/v2/mgo/bson"
 )
 
@@ -18,50 +16,51 @@ import (
 func NewUser(out http.ResponseWriter, in *http.Request) {
 
     log.Msg("executing NewUser function")
-    
+
     // un contenitore per i dati relative al utente che si deve creare e che
     // verrano inseriti nella database
     user := objectspace.NewUser()
-    
+
+    // contenitore per gli errori
     errors := NewCoreErr()
-    
+
+    // procedura obligatori che estrae i dati codificati nel url della richiesta
+    // o nei dati trasmessi da una forma e li inserisce nel in.Form
     in.ParseForm()
-    
+
     login := ExtractSingleValue(in.Form, "login")
     err := user.SetLogin(login)
-    if err != nil {
-        errors.append("login", err)
-    }
-    
+    errors.append("login", err)
+
     // verifica e inserimento della passowrd nel contenitore del utente
     password := ExtractSingleValue(in.Form, "password")
     err = user.SetPassword(password)
-    if err != nil {
-        errors.append("password", err)
-    }
-    
+    errors.append("password", err)
+
     // get and set name
     name := ExtractSingleValue(in.Form, "name")
     err = user.SetName(name)
-    if err != nil {
-        errors.append("name", err)
-    }
+    errors.append("name", err)
+
+    // get and set description
+    description := ExtractSingleValue(in.Form, "description")
+    err = user.SetDescription(description)
+    errors.append("description", err)
 
     id := bson.NewObjectId().Hex()
     err = user.SetId(id)
-    if err != nil {
-        errors.append("id", err)
-    }
-    
+    errors.append("id", err)
+
     // TODO: tutte le altre operazioni per necesari per la registrazione utente
-    
-    // se i dati in entratta sono considerati errati,
-    // allora rimanda i dati indietro con l'errore
+
+    // se i dati in entratta sono considerati errati, significa che la variabile errors
+    // non è vota. a questo punto inviamo gli errori al cliente e concludeamo l'esecuzione
+    // della richiesta.
     if len(errors) > 0 {
         WriteJsonResult(out, errors, "error")
         return
     }
-    
+
     // se i dati in entrata sono stati accetati allora slava l'utente
     err = user.Save()
     if err != nil {
@@ -70,7 +69,7 @@ func NewUser(out http.ResponseWriter, in *http.Request) {
         WriteJsonResult(out, errors, "error")
         return
     }
-    
+
     WriteJsonResult(out, user, "ok")
 }
 
@@ -78,10 +77,10 @@ func NewUser(out http.ResponseWriter, in *http.Request) {
 // UpdateUser aggiorna il valori di un utenti nella database
 func UpdateUser(out http.ResponseWriter, in *http.Request) {
     log.Msg("executing UpdateUser function")
-    
+
     in.ParseForm()
     errors := NewCoreErr()
-    
+
     user := objectspace.NewUser()
 
     id := strings.Split(in.URL.Path[1:], "/")[2]
@@ -89,15 +88,17 @@ func UpdateUser(out http.ResponseWriter, in *http.Request) {
     if err != nil {
         errors.append("id", err)
     }
-    
+
+    filter := bson.M{"_id":id}
+
     // oteniamo il utende dal database che poi vera aggiornato
-    err = user.Restore()
+    err = user.Restore(filter)
     if err != nil {
         errors.append("on restore", err)
         WriteJsonResult(out, errors, "error")
         return
     }
-    
+
     // aggiorniamo il valore del rating del utente
     strRating := ExtractSingleValue(in.Form, "rating")
     if len(strRating) > 0 {
@@ -111,25 +112,25 @@ func UpdateUser(out http.ResponseWriter, in *http.Request) {
             }
         }
     }
-    
-    
+
+
     // update values for user
     // name
     // contacts
     // ...
-    
+
     if len(errors) > 0 {
         WriteJsonResult(out, errors, "error")
         return
     }
-    
+
     err = user.Update()
     if err != nil {
         errors.append("on update", err)
         WriteJsonResult(out, errors, "error")
         return
     }
-    
+
     WriteJsonResult(out, user, "ok")
 }
 
@@ -138,14 +139,14 @@ func UpdateUser(out http.ResponseWriter, in *http.Request) {
 func GetUser(out http.ResponseWriter, in *http.Request) {
 
     log.Msg("executing GetUser function")
-    
+
     in.ParseForm()
-    
+
     errors := NewCoreErr()
-    
+
     // cearmo un nuovo ogetto/contenitore per il utente richiesto
     user := objectspace.NewUser()
-    
+
     // aggiorniamo il valore del id del utente, che servirà per ricavare l'utente
     // dal database
     id := strings.Split(in.URL.Path[1:], "/")[2]
@@ -153,21 +154,23 @@ func GetUser(out http.ResponseWriter, in *http.Request) {
     if err != nil {
         errors.append("id", err)
     }
-    
+
     // fermiamo l'esecuzione se fino a questo momento abbiamo incontrato qualche errore
     if len(errors) > 0{
         WriteJsonResult(out, errors, "error")
         return
     }
-    
+
+    filter := bson.M{"_id":id}
+
     // ricavare i dati del utente dalla database
-    err = user.Restore()
+    err = user.Restore(filter)
     if err != nil {
         errors.append("on restore", err)
         WriteJsonResult(out, errors, "error")
         return
     }
-    
+
     log.Debug("%s", user.GetId())
 
     WriteJsonResult(out, user, "ok")
@@ -177,9 +180,9 @@ func GetUser(out http.ResponseWriter, in *http.Request) {
 // TODO: posibilita' di applicare dei filtri
 func GetUserAll(out http.ResponseWriter, in *http.Request){
     log.Msg("executing GetUserAll function")
-    
+
     userList := objectspace.NewUserList()
-    
+
     err := userList.Restore()
     if err != nil {
         errors := NewCoreErr()
