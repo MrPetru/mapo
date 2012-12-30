@@ -6,6 +6,7 @@ import (
 
     "errors"
     "labix.org/v2/mgo/bson"
+    "strings"
 )
 
 // il contenitore base che si usa per transportare i dati di un utente verso
@@ -24,7 +25,7 @@ type user struct {
 
 type contacts struct {
     Email string
-    addr string
+    Addr string
 }
 
 // una lista di utenti
@@ -36,6 +37,7 @@ func NewUserList() userList {
     return ul
 }
 
+// TODO: verificare se c'e' bisogno di una sime funzione per gli utenti nel core
 func (ul *userList) Restore() error {
     log.Debug("restore all users from database")
 
@@ -46,7 +48,6 @@ func (ul *userList) Restore() error {
 
 func NewUser() user {
     u := new(user)
-    //u.Contacts = make([]string,0)
     u.Rating = 0
     u.Studios = make([]string,0)
 
@@ -84,7 +85,7 @@ func (u *user) GetLogin() string {
 func (u *user) SetPassword(value string) error {
 
     if len(value) < 6 {
-        return errors.New("troppo corta") 
+        return errors.New("troppo corta")
     }
 
     u.Password = value
@@ -99,7 +100,7 @@ func (u *user) GetPassword() string {
 func (u *user) SetName(value string) error {
 
     if len(value) < 6 {
-        return errors.New("troppo corto") 
+        return errors.New("troppo corto")
     }
 
     u.Name = value
@@ -122,6 +123,14 @@ func (u *user) SetDescription(value string) error {
 
     u.Description = value
     return nil
+}
+
+func (u *user) SetEmail(value string) error {
+    if tmp := strings.Split(value, "@"); len(tmp) == 2 {
+        u.Contacts.Email = value
+        return nil
+    }
+    return errors.New("email non valida")
 }
 
 func (u *user) AppendStudioId(value string) error {

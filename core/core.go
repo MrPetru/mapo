@@ -8,6 +8,8 @@ import (
 
 // ExtractSingleValue è una funzione che aiuta a prendere un singolo valore
 // dalla mappa di valori della forma (in.Form per esempio).
+// TODO: verificare l'utilizo della funzione in,FormValue("id") se è adata
+// al utilizo in/a posto di questa funzione
 func ExtractSingleValue(data map[string][]string, name string) string {
     v, ok := data[name]
     if !ok {
@@ -33,6 +35,7 @@ type statusResult struct {
 
 // WriteJsonResult è una scorciatoia per inviare il risultato verso il cliente
 // in formato json.
+// TODO: in caso di errore che codice dobbiamo ritornare? 412? 424?
 func WriteJsonResult(out http.ResponseWriter, data interface{}, status string) {
 
     result := new(statusResult)

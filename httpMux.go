@@ -15,9 +15,12 @@ import (
 // l'applicazione senza rischi o corruzione dei dati.
 type ServeMux struct {
 
-    // lista dei handler registrati
+    // lista dei handler registrati, con o senza autenticazione
     m map[string]Handler
 
+    // se non è nil, contiene la funzione autentifica il utente che fa la richiesta
+    // questo identiticatore si usarà di seguito per registrare dei handeler che hanno
+    // bisogno di autenticazione.
     authenticator func(http.ResponseWriter, *http.Request) (http.ResponseWriter, *http.Request, bool)
 
     // il numero delle connessione attive in questo momento
@@ -47,10 +50,13 @@ func (hwoa handlerWithoutAuthentication) ServeHTTP(out http.ResponseWriter, in *
     hwoa(out, in)
 }
 
+// SetAuthenticator allega al mux una funzione da noi definita che si userà
+// per autenticare il utente che fa la richeista.
 func (mux *ServeMux) SetAuthenticator(auth func(http.ResponseWriter, *http.Request) (http.ResponseWriter, *http.Request, bool)) {
     mux.authenticator = auth
 }
 
+// Handler registra un handler che di defautl usa l'autenticazione.
 func (mux *ServeMux) HandleFunc(method, path string, handle func(http.ResponseWriter, *http.Request) ) {
 
     handlerFunc := new(handlerWithAuthentication)
@@ -62,6 +68,8 @@ func (mux *ServeMux) HandleFunc(method, path string, handle func(http.ResponseWr
     mux.m[pattern] = handlerFunc
 }
 
+// HandleFuncNoAuth registra in modo explicito un handler che non ha bisogno
+// di un autente autenticato.
 func (mux *ServeMux) HandleFuncNoAuth(method, path string, handle func(http.ResponseWriter, *http.Request) ) {
 
     handlerFunc := new(handlerWithoutAuthentication)
@@ -72,6 +80,13 @@ func (mux *ServeMux) HandleFuncNoAuth(method, path string, handle func(http.Resp
     mux.m[pattern] = handlerFunc
 }
 
+func (mux *ServeMux) Handle(method, path string, handler Handler) {
+    pattern := createPattern(method, path)
+    mux.m[pattern] = handler
+}
+
+// createPattern, per il momento è una funzione limitata a creare la regola
+// in base a quale si andrà a verificare se il path corisponde a un certo handler.
 func createPattern(method, path string) string {
     pattern := "(?i)^"
 
@@ -92,10 +107,11 @@ func createPattern(method, path string) string {
         }
     }
     pattern = pattern + "$"
-
     return pattern
 }
 
+// match è usata nel processo di identificazione delle handler necessario da
+// eseguire per una certa risorsa identificata dal url.
 func (mux *ServeMux) match(r *http.Request) Handler {
     method := r.Method
     url := r.URL.Path
@@ -120,6 +136,8 @@ func (mux *ServeMux) match(r *http.Request) Handler {
     return http.NotFoundHandler()
 }
 
+// NewServeMux restituisce un nuovo mux, molto simile al mux originale del
+// modulo http di go.
 func NewServeMux() *ServeMux {
     mux := new(ServeMux)
     mux.m = make(map[string]Handler, 0)
@@ -127,6 +145,8 @@ func NewServeMux() *ServeMux {
     return mux
 }
 
+// Handler è la ridefenizione del Handler del modulo http di go.
+// usato per provare a mantenere la logica del quel modulo.
 type Handler interface {
     ServeHTTP(http.ResponseWriter, *http.Request)
 }

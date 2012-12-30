@@ -26,26 +26,32 @@ func NewUser(out http.ResponseWriter, in *http.Request) {
 
     // procedura obligatori che estrae i dati codificati nel url della richiesta
     // o nei dati trasmessi da una forma e li inserisce nel in.Form
-    in.ParseForm()
+    //in.ParseForm()
 
-    login := ExtractSingleValue(in.Form, "login")
+    //login := ExtractSingleValue(in.Form, "login")
+    login := in.FormValue("login")
     err := user.SetLogin(login)
     errors.append("login", err)
 
     // verifica e inserimento della passowrd nel contenitore del utente
-    password := ExtractSingleValue(in.Form, "password")
+    password := in.FormValue("password")
     err = user.SetPassword(password)
     errors.append("password", err)
 
     // get and set name
-    name := ExtractSingleValue(in.Form, "name")
+    name := in.FormValue("name")
     err = user.SetName(name)
     errors.append("name", err)
 
     // get and set description
-    description := ExtractSingleValue(in.Form, "description")
+    description := in.FormValue("description")
     err = user.SetDescription(description)
     errors.append("description", err)
+
+    // get and set user email
+    email := in.FormValue("email")
+    err = user.SetEmail(email)
+    errors.append("email", err)
 
     id := bson.NewObjectId().Hex()
     err = user.SetId(id)
@@ -85,8 +91,10 @@ func UpdateUser(out http.ResponseWriter, in *http.Request) {
 
     id := strings.Split(in.URL.Path[1:], "/")[2]
     err := user.SetId(id)
-    if err != nil {
-        errors.append("id", err)
+    errors.append("id", err)
+    if len(errors) > 0 {
+        WriteJsonResult(out, errors, "error")
+        return
     }
 
     filter := bson.M{"_id":id}
@@ -97,6 +105,30 @@ func UpdateUser(out http.ResponseWriter, in *http.Request) {
         errors.append("on restore", err)
         WriteJsonResult(out, errors, "error")
         return
+    }
+
+    password := ExtractSingleValue(in.Form, "password")
+    if len(password) > 0 {
+        err = user.SetPassword(password)
+        errors.append("password", err)
+    }
+
+    name := ExtractSingleValue(in.Form, "name")
+    if len(name) > 0 {
+        err = user.SetName(name)
+        errors.append("name", err)
+    }
+
+    description := ExtractSingleValue(in.Form, "description")
+    if len(description) > 0 {
+        err = user.SetDescription(description)
+        errors.append("description", err)
+    }
+
+    email := ExtractSingleValue(in.Form, "email")
+    if len(email) > 0 {
+        err = user.SetEmail(email)
+        errors.append("email", err)
     }
 
     // aggiorniamo il valore del rating del utente
@@ -178,6 +210,8 @@ func GetUser(out http.ResponseWriter, in *http.Request) {
 
 // GetUserAll restituisce una lista di tutti utenti nel database
 // TODO: posibilita' di applicare dei filtri
+// TODO: verificare she c'è bisogno di una funzione simile,
+// ci sono casi quando serve avere una lista di utenti? sicuramente si, ma e questa l'utilizo giusto??
 func GetUserAll(out http.ResponseWriter, in *http.Request){
     log.Msg("executing GetUserAll function")
 

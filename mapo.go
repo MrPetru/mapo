@@ -99,6 +99,9 @@ func main() {
     //muxer.HandleFuncNoAuth("GET", "/login", core.Login)
     muxer.HandleFuncNoAuth("GET", "/logout", core.Logout)
 
+    fh := http.StripPrefix("/js/", http.FileServer(http.Dir("/home/develop/go/src/mapo/webui/static/js")))//.(Handler)
+    muxer.Handle("GET", "/js/.*", fh)
+
     log.Info("start listening for requests")
 
     // avviamo il server che processerà le richieste

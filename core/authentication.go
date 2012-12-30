@@ -12,6 +12,7 @@ import (
     "io"
 )
 
+// RequestAuth richiede al client di autenticarsi
 func RequestAuth(out http.ResponseWriter) {
     out.Header().Set("WWW-Authenticate", "Basic realm='mapomapo'")
     out.WriteHeader(401)
@@ -58,7 +59,9 @@ func Authenticator(out http.ResponseWriter, in *http.Request) (http.ResponseWrit
     if user.Password == password {//[:len(password)-1] {
         // TODO:verificare se questo ParseForm non crea conflitto con altri ParseForm
         // che vengono chiamati nelle funzioni seguenti.
-        in.ParseForm()
+        // in.ParseForm() - questa funzione vera chiamata in automatico da ParseMultipartForm
+        // se sara bisogno.
+        in.ParseMultipartForm(0)
         in.Form["currentuid"] = []string{user.GetId()}
         return out, in, true
     }
@@ -67,11 +70,16 @@ func Authenticator(out http.ResponseWriter, in *http.Request) (http.ResponseWrit
     return out, in, false
 }
 
+// in dipendenza dalla procedura usata, questa funzione potrebbe non
+// essere indinspensabile.
 func Login(out http.ResponseWriter, in *http.Request) {
 
     fmt.Fprint(out, "login")
 }
 
+// la funzione di deautenticazione non e' cosi semplice quando si usa il metodo
+// Authorization, il header WWW-Authenticate deve essere cancellato da un script
+// da parte del cliente.
 func Logout(out http.ResponseWriter, in *http.Request) {
 
     fmt.Fprint(out, "logout")
