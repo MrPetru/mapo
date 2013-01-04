@@ -14,8 +14,9 @@ import (
 // Accesso a questo contenitore avviene attraverso le funzioni definiti qui.
 type user struct {
     Id string `bson:"_id"`
-    Login string
-    Name string
+    Username string
+    Firstname string
+    Lastname string
     Password string `json:"-"`
     Contacts contacts `json:"-"`
     Description string
@@ -56,10 +57,10 @@ func NewUser() user {
 
 func (u *user) SetId(value string) error {
 
-    if len(value) < 24 {
+    if len(value) < 4 {
         return errors.New("troppo corto")
     }
-    u.Id = value
+    u.Id = Md5sum(value)
     return nil
 }
 
@@ -67,19 +68,19 @@ func (u *user) GetId() string {
     return u.Id
 }
 
-func (u *user) SetLogin(value string) error {
+func (u *user) SetUsername(value string) error {
 
     if len(value) < 4 {
         return errors.New("troppo corto")
     }
 
-    u.Login = value
+    u.Username = value
     return nil
 }
 
-func (u *user) GetLogin() string {
+func (u *user) GetUsername() string {
 
-    return u.Login
+    return u.Username
 }
 
 func (u *user) SetPassword(value string) error {
@@ -88,7 +89,7 @@ func (u *user) SetPassword(value string) error {
         return errors.New("troppo corta")
     }
 
-    u.Password = value
+    u.Password = Md5sum(value)
     return nil
 }
 
@@ -97,13 +98,23 @@ func (u *user) GetPassword() string {
     return u.Password
 }
 
-func (u *user) SetName(value string) error {
+func (u *user) SetFirstname(value string) error {
 
-    if len(value) < 6 {
+    if len(value) < 2 {
         return errors.New("troppo corto")
     }
 
-    u.Name = value
+    u.Firstname = value
+    return nil
+}
+
+func (u *user) SetLastname(value string) error {
+
+    if len(value) < 2 {
+        return errors.New("troppo corto")
+    }
+
+    u.Lastname = value
     return nil
 }
 

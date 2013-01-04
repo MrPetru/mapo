@@ -41,6 +41,9 @@ func main() {
 
     // istruiamo la database di creare una nuova connessione.
     // specificandoli a quale database si deve collegare
+    // TODO: qunado il database viene creato per la prima volta, ci dobbiamo
+    // assigurare che abbiamo descrito il campo usernaeme come un campo con dei valori
+    // unici.
     err := database.NewConnection("mapo")
     if err != nil {
         log.Info("error connecting to database (%v)", err)
@@ -100,10 +103,10 @@ func main() {
     muxer.HandleFuncNoAuth("GET", "/logout", core.Logout)
 
     jsHandler := http.StripPrefix("/js/", http.FileServer(http.Dir("/home/develop/go/src/mapo/webui/static/js")))
-    muxer.Handle("GET", "/js/.*", jsHandler)
+    muxer.Handle("GET", "/js/.*\\.js", jsHandler)
 
     cssHandler := http.StripPrefix("/css/", http.FileServer(http.Dir("/home/develop/go/src/mapo/webui/static/css")))
-    muxer.Handle("GET", "/css/.*", cssHandler)
+    muxer.Handle("GET", "/css/.*\\.css", cssHandler)
 
     log.Info("start listening for requests")
 

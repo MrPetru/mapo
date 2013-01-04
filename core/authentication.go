@@ -8,8 +8,6 @@ import (
     "encoding/base64"
     "mapo/objectspace"
     "labix.org/v2/mgo/bson"
-    "bytes"
-    "io"
 )
 
 // RequestAuth richiede al client di autenticarsi
@@ -33,14 +31,13 @@ func Authenticator(out http.ResponseWriter, in *http.Request) (http.ResponseWrit
     }
     encodedString := strings.Split(authHeader[0], " ")[1]
 
-    var resultBuf bytes.Buffer
-    b64Decoder := base64.NewDecoder(base64.StdEncoding, bytes.NewBufferString(encodedString))
-    io.Copy(&resultBuf, b64Decoder)
-    decodedString := resultBuf.String()
+    encoder := base64.StdEncoding
+    dec, _ := encoder.DecodeString(encodedString)
+    decodedString := string(dec)
 
-    var login, password string
+    var username, password string
     if tmp := strings.Split(string(decodedString), ":"); len(tmp) == 2 {
-        login = tmp[0]
+        username = tmp[0]
         password = tmp[1]
     } else {
         RequestAuth(out)
@@ -48,7 +45,7 @@ func Authenticator(out http.ResponseWriter, in *http.Request) (http.ResponseWrit
     }
 
     user := objectspace.NewUser()
-    filter := bson.M{"login":login}
+    filter := bson.M{"username":username}
     err := user.Restore(filter)
     if err != nil {
         log.Debug("user restore error = %v", err)
@@ -56,7 +53,8 @@ func Authenticator(out http.ResponseWriter, in *http.Request) (http.ResponseWrit
         return out, in, false
     }
 
-    if user.Password == password {//[:len(password)-1] {
+    md5password := objectspace.Md5sum(password)
+    if user.Password == md5password {
         // TODO:verificare se questo ParseForm non crea conflitto con altri ParseForm
         // che vengono chiamati nelle funzioni seguenti.
         // in.ParseForm() - questa funzione vera chiamata in automatico da ParseMultipartForm

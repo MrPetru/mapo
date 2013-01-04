@@ -28,20 +28,26 @@ func NewUser(out http.ResponseWriter, in *http.Request) {
     // o nei dati trasmessi da una forma e li inserisce nel in.Form
     //in.ParseForm()
 
-    //login := ExtractSingleValue(in.Form, "login")
-    login := in.FormValue("login")
-    err := user.SetLogin(login)
-    errors.append("login", err)
+    // extract and set username value
+    username := in.FormValue("username")
+    err := user.SetUsername(username)
+    errors.append("username", err)
 
     // verifica e inserimento della passowrd nel contenitore del utente
     password := in.FormValue("password")
     err = user.SetPassword(password)
     errors.append("password", err)
 
-    // get and set name
-    name := in.FormValue("name")
-    err = user.SetName(name)
-    errors.append("name", err)
+    // get and set firstname
+    firstname := in.FormValue("firstname")
+    err = user.SetFirstname(firstname)
+    errors.append("firstname", err)
+
+    // get and set lastname
+    lastname := in.FormValue("lastname")
+    err = user.SetLastname(lastname)
+    errors.append("lastname", err)
+
 
     // get and set description
     description := in.FormValue("description")
@@ -53,9 +59,10 @@ func NewUser(out http.ResponseWriter, in *http.Request) {
     err = user.SetEmail(email)
     errors.append("email", err)
 
-    id := bson.NewObjectId().Hex()
-    err = user.SetId(id)
-    errors.append("id", err)
+	// per il momlento l'id e la soma md5 del username
+    err = user.SetId(username)
+	// se is SetUsername non avra errori allora anche qui non avremo.
+    //errors.append("id", err)
 
     // TODO: tutte le altre operazioni per necesari per la registrazione utente
 
@@ -113,10 +120,16 @@ func UpdateUser(out http.ResponseWriter, in *http.Request) {
         errors.append("password", err)
     }
 
-    name := ExtractSingleValue(in.Form, "name")
-    if len(name) > 0 {
-        err = user.SetName(name)
-        errors.append("name", err)
+    firstname := ExtractSingleValue(in.Form, "firstname")
+    if len(firstname) > 0 {
+        err = user.SetFirstname(firstname)
+        errors.append("firstname", err)
+    }
+
+    lastname := ExtractSingleValue(in.Form, "lastname")
+    if len(lastname) > 0 {
+        err = user.SetLastname(lastname)
+        errors.append("lastname", err)
     }
 
     description := ExtractSingleValue(in.Form, "description")

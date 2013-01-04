@@ -14,13 +14,15 @@ function formNewUser() {
     formTitle.text("Create New User");
     form.append(formTitle);
 
-    form.append(text("Login:", "login"));
+    form.append(text("Username:", "username"));
     form.append(text("Password:", "password"));
-    form.append(text("Displa Name:", "name"));
+    form.append(text("First Name:", "firstname"));
+    form.append(text("Last Name:", "lastname"));
     form.append(textarea("Description:", "description"));
     form.append(text("Email:", "email"));
 
-    var errorContainer = $("<div/>", {name: "error:"+name});
+    form.append($("<br/>"));
+    var errorContainer = $("<div/>", {name: "error"});
     errorContainer.addClass("error");
     form.append(errorContainer);
 
@@ -85,7 +87,7 @@ function text(prefix, name) {
 }
 
 function getJson() {
-    var errorElements = $('[name^="error:"]').text(""); 
+    var errorElements = $('[name^="error"]').text(""); 
     var form = $("form")[0];
     var formdata = new FormData(form);
     var xhr = new XMLHttpRequest();
@@ -99,9 +101,9 @@ function getJson() {
         for (err in data) {
             var errorDiv = $('[name="error:'+err+'"]');
             if (errorDiv.length == 0) {
-                $('[name="error"]').text(data[err]);
+                $('[name="error"]').text(err + ": "+data[err]);
             }
-            errorDiv.text(data[err]);
+            errorDiv.text(err + ": "+ data[err]);
         };
     };
 
