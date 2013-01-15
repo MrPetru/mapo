@@ -30,21 +30,35 @@ import (
     "os"
     "os/signal"
     "syscall"
+    "flag"
+    "fmt"
 )
 
 // main risponde del avvio del'applicazione e della sua
 // registrazione come server in ascolto su la rete.
 func main() {
 
+    var confFilePath = flag.String("conf", "./conf.ini", "path to configuration file")
+    var logLevel = flag.String("log", "DEBUG", "output log level NONE, INFO, MESSAGE, ERROR, DEBUG")
+
+    flag.Parse()
+
     // settiamo il livello generale dei messaggi da visualizzare
-    log.SetLevel("DEBUG")
+    log.SetLevel(*logLevel)
+
+    err := core.ReadConfiguration(*confFilePath)
+    //configuration, err := conf.ReadConfigFile(*confFilePath)
+    if err != nil {
+        fmt.Printf("%v\n", err)
+        return
+    }
 
     // istruiamo la database di creare una nuova connessione.
     // specificandoli a quale database si deve collegare
     // TODO: qunado il database viene creato per la prima volta, ci dobbiamo
     // assigurare che abbiamo descrito il campo usernaeme come un campo con dei valori
     // unici.
-    err := database.NewConnection("mapo")
+    err = database.NewConnection("mapo")
     if err != nil {
         log.Info("error connecting to database (%v)", err)
         return
@@ -99,7 +113,7 @@ func main() {
 
     muxer.HandleFuncNoAuth("GET", "/", webui.Root)
 
-    //muxer.HandleFuncNoAuth("GET", "/login", core.Login)
+    muxer.HandleFuncNoAuth("POST", "/login", core.Login)
     muxer.HandleFuncNoAuth("GET", "/logout", core.Logout)
 
     jsHandler := http.StripPrefix("/js/", http.FileServer(http.Dir("/home/develop/go/src/mapo/webui/static/js")))
@@ -107,6 +121,10 @@ func main() {
 
     cssHandler := http.StripPrefix("/css/", http.FileServer(http.Dir("/home/develop/go/src/mapo/webui/static/css")))
     muxer.Handle("GET", "/css/.*\\.css", cssHandler)
+
+    // OAuth
+    //oauth2callback
+    muxer.HandleFuncNoAuth("GET", "/oauth2callback", core.OAuthCallBack)
 
     log.Info("start listening for requests")
 

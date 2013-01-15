@@ -17,7 +17,7 @@ func NewStudio(out http.ResponseWriter, in *http.Request) {
     // create new studio
     log.Msg("executing NewStudio function")
 
-    in.ParseForm()
+    //in.ParseForm()
     errors := NewCoreErr()
 
     // creamo un nuovo contenitore di tipo studio

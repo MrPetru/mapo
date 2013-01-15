@@ -3,15 +3,33 @@
 <head>
     <title>Mapo</title>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8/jquery.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1/jquery-ui.js"></script>
+
+    <script src="/js/jquery.cookie.js"></script>
     <script src="/js/jquery.mapo.js"></script>
+    <script src="/js/jquery.mapo.widgets.js"></script>
 
     <link rel="stylesheet" type="text/css" href="/css/style.mapo.css">
+    <link rel="stylesheet" type="text/css" href="//ajax.googleapis.com/ajax/libs/jqueryui/1/themes/base/jquery-ui.css">
 </head>
 
 <body>
-<p>Welcom To Mapo.</p>
+<div id="menu">
+    <select id="menucategory">
+        <option value="user">user</option>
+        <option value="studio">studio</option>
+        <option value="project">project</option>
+    </select>
+    <div id="menucontainer"></div>
 
-<b onclick="formNewUser()">New User</b>
+</div>
+
+
+<div id="content"><p>Welcom To Mapo.</p></div>
+OAuth test
+<a href="https://accounts.google.com/o/oauth2/auth?scope=https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile&state=profile&redirect_uri=http://localhost:8081/oauth2callback&response_type=code&client_id=60876467348.apps.googleusercontent.com&approval_prompt=force">REQUEST</a>
+
+<div id="dialogcontainer"></div>
 </body>
 
 </html>

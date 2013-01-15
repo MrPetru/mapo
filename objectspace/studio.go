@@ -45,7 +45,7 @@ func (s *studio) SetName(value string) error {
 }
 
 func (s *studio) AppendOwner(value string) error {
-    if len(value) != 24 {
+    if len(value) != 32 {
         return errors.New("troppo corto")
     }
 
@@ -54,7 +54,7 @@ func (s *studio) AppendOwner(value string) error {
 }
 
 func (s *studio) AppendProject(value string) error {
-    if len(value) != 24 {
+    if len(value) != 32 {
         return errors.New("troppo corto")
     }
 

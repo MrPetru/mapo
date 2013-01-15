@@ -4,6 +4,7 @@ import (
     "encoding/json"
     "net/http"
     "fmt"
+    "gconf/conf"
 )
 
 // ExtractSingleValue è una funzione che aiuta a prendere un singolo valore
@@ -45,7 +46,7 @@ func WriteJsonResult(out http.ResponseWriter, data interface{}, status string) {
 
     jsonResult, _ := json.Marshal(result)
 
-    out.Header().Set("Content-Type","application/json")
+    out.Header().Set("Content-Type","application/json;charset=UTF-8")
     fmt.Fprint(out, string(jsonResult))
 }
 
@@ -73,3 +74,13 @@ func (ce *coreErr) append(key string, err interface{}) {
     }
 }
 
+var GlobalConfiguration *conf.ConfigFile
+func ReadConfiguration(filepath string) error {
+
+    c, err := conf.ReadConfigFile(filepath)
+    if err == nil {
+        GlobalConfiguration = c
+    }
+
+    return err
+}

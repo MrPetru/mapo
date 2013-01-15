@@ -2,8 +2,6 @@
 *.o
 *.a
 *.so
-*.swp
-*~
 
 # Folders
 _obj
@@ -25,3 +23,7 @@ _testmain.go
 
 # temporary editor files
 *.swp
+*~
+
+# local config files
+*_local.ini
