@@ -61,8 +61,8 @@ func NewUser(out http.ResponseWriter, in *http.Request) {
 
 	// per il momlento l'id e la soma md5 del username
     err = user.SetId(username)
-	// se is SetUsername non avra errori allora anche qui non avremo.
-    //errors.append("id", err)
+	// se il SetUsername non avra errori allora anche qui non avremo.
+    // questa volta non usiamo il error on quest modo errors.append("id", err)
 
     // TODO: tutte le altre operazioni per necesari per la registrazione utente
 

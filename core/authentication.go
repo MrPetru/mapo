@@ -5,12 +5,9 @@ import (
     "net/url"
     "mapo/log"
     "fmt"
-    //"strings"
-    //"encoding/base64"
     "encoding/json"
     "mapo/objectspace"
     "labix.org/v2/mgo/bson"
-    //"bytes"
     "io/ioutil"
 )
 
@@ -33,50 +30,6 @@ func Authenticator(out http.ResponseWriter, in *http.Request) (http.ResponseWrit
 
     log.Msg("authenticate for %v", in.URL.Path)
 
-    //authHeader, ok := in.Header["Authorization"]
-    //if !ok {
-    //    RequestAuth(out)
-    //    return out, in, false
-    //}
-    //encodedString := strings.Split(authHeader[0], " ")[1]
-
-    //encoder := base64.StdEncoding
-    //dec, _ := encoder.DecodeString(encodedString)
-    //decodedString := string(dec)
-
-    //var username, password string
-    //if tmp := strings.Split(string(decodedString), ":"); len(tmp) == 2 {
-    //    username = tmp[0]
-    //    password = tmp[1]
-    //} else {
-    //    RequestAuth(out)
-    //    return out, in, false
-    //}
-
-    //user := objectspace.NewUser()
-    //filter := bson.M{"username":username}
-    //err := user.Restore(filter)
-    //if err != nil {
-    //    log.Debug("user restore error = %v", err)
-    //    RequestAuth(out)
-    //    return out, in, false
-    //}
-
-    //md5password := objectspace.Md5sum(password)
-    //if user.Password == md5password {
-    //    // TODO:verificare se questo ParseForm non crea conflitto con altri ParseForm
-    //    // che vengono chiamati nelle funzioni seguenti.
-    //    // in.ParseForm() - questa funzione vera chiamata in automatico da ParseMultipartForm
-    //    // se sara bisogno.
-    //    in.ParseMultipartForm(0)
-    //    in.Form["currentuid"] = []string{user.GetId()}
-    //    return out, in, true
-    //}
-
-    //RequestAuth(out)
-    //return out, in, false
-
-    //var authid string
     if c, err := in.Cookie("authid"); err == nil {
         authid := c.Value
         log.Debug("authid = %v", authid)
@@ -120,10 +73,9 @@ func Login(out http.ResponseWriter, in *http.Request) {
     // TODO: a valid value for authentication cookie
     authid := user.Id
 
-    http.SetCookie(out, &http.Cookie{Name:"authid", Value: authid, Path: "/"})//, Domain: "mapo.com"})
+    http.SetCookie(out, &http.Cookie{Name:"authid", Value: authid, Path: "/"})
 
     WriteJsonResult(out, nil, "ok")
-    //fmt.Fprint(out, "login")
 }
 
 // la funzione di deautenticazione non e' cosi semplice quando si usa il metodo
@@ -165,11 +117,9 @@ func OAuthCallBack(out http.ResponseWriter, in *http.Request) {
 
         rbody, err := ioutil.ReadAll(resp.Body)
 
-        //if err != nil {
-            v := map[string]interface{}{}
-            err = json.Unmarshal(rbody, &v)
-            log.Debug("response body %v, %v", v, err)
-        //}
+        v := map[string]interface{}{}
+        err = json.Unmarshal(rbody, &v)
+        log.Debug("response body %v, %v", v, err)
 
         // get user data
         userData := map[string]interface{}{}

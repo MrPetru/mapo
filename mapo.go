@@ -31,7 +31,6 @@ import (
     "os/signal"
     "syscall"
     "flag"
-    "fmt"
 )
 
 // main risponde del avvio del'applicazione e della sua
@@ -43,13 +42,12 @@ func main() {
 
     flag.Parse()
 
-    // settiamo il livello generale dei messaggi da visualizzare
+    // livello generale del log, quantita dei messaggi da stampare
     log.SetLevel(*logLevel)
 
     err := core.ReadConfiguration(*confFilePath)
-    //configuration, err := conf.ReadConfigFile(*confFilePath)
     if err != nil {
-        fmt.Printf("%v\n", err)
+        log.Info("no valid configuration, details: %v", err)
         return
     }
 

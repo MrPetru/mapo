@@ -142,29 +142,15 @@ function postJson(form) {
 }
 
 function getJson(url) {
-    //var errorElements = $('[name^="error"]', form).text(""); 
-    //var form = $("form")[0];
-    //var formdata = new FormData(form);
     var xhr = new XMLHttpRequest();
     xhr.open("GET", url, false);
-    //xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
     xhr.send(null);
     var result = JSON.parse(xhr.responseText);
     var data = result.data;
     if (result.status == "ok") {
-        //$(form).remove();
-        //$("#dialogcontainer").dialog("destroy");
-        //alert("TODO: update page content");
-        //updateMenu();
-        //return false;
         return data;
     } else {
         for (err in data) {
-            //var errorDiv = $('[name="error:'+err+'"]', form);
-            //if (errorDiv.length == 0) {
-            //    $('[name="error"]', form).text(err + ": "+data[err]);
-            //}
-            //errorDiv.text(err + ": "+ data[err]);
             alert("error: "+ data[err]);
         };
     };
