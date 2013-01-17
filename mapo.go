@@ -121,7 +121,8 @@ func main() {
     muxer.Handle("GET", "/css/.*\\.css", cssHandler)
 
     // OAuth
-    //oauth2callback
+    // su questo url viene reinderizato il cliente dopo che la procedura di authenticazione
+    // sul server del servizio aviene con successo o meno.
     muxer.HandleFuncNoAuth("GET", "/oauth2callback", core.OAuthCallBack)
 
     log.Info("start listening for requests")

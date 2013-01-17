@@ -12,6 +12,7 @@ import (
 )
 
 // RequestAuth richiede al client di autenticarsi
+// TODO: cancellare questa funzione se non servira
 func RequestAuth(out http.ResponseWriter) {
     out.Header().Set("WWW-Authenticate", "Basic realm='mapomapo'")
     out.WriteHeader(401)
@@ -92,45 +93,57 @@ func OAuthCallBack(out http.ResponseWriter, in *http.Request) {
 
     in.ParseMultipartForm(0)
 
+    // nel caso che l'utente non consente l'accesso ai suoi dati, il dati ricevuti
+    // da questa funzione contera una mapa che avra la chiave "error"
     if value := in.FormValue("error"); value == "" {
 
         code := in.FormValue("code")
 
         var client_id, client_secret string
         client_id, err := GlobalConfiguration.GetString("googleoauth", "clientid")
-        log.Debug("client_id %v err %v", client_id, err)
-
         client_secret, err = GlobalConfiguration.GetString("googleoauth", "clientsecret")
-        log.Debug("client_secret %v err %v", client_secret, err)
-
         if len(client_id) < 1 || len(client_secret) < 1 {
             log.Debug("invalid configuration for OAuth")
             return
         }
 
-        data := url.Values{"code":{code}, "client_id":{client_id}, "client_secret":{client_secret}, "redirect_uri":{"http://localhost:8081/oauth2callback"}, "grant_type":{"authorization_code"}}
-        resp, err := http.PostForm("https://accounts.google.com/o/oauth2/token", data)
+        // ora che abbiamo il permesso del utente chediamo a google il acces_token per poter
+        // accedere ai deti del utente
+        postData := url.Values{"code":{code}, "client_id":{client_id}, "client_secret":{client_secret}, "redirect_uri":{"http://localhost:8081/oauth2callback"}, "grant_type":{"authorization_code"}}
+        response, err := http.PostForm("https://accounts.google.com/o/oauth2/token", postData)
         if err != nil {
             log.Debug("get token error %v", err)
+            return
         }
-        defer resp.Body.Close()
+        defer response.Body.Close()
 
-        rbody, err := ioutil.ReadAll(resp.Body)
+        responseBody, _ := ioutil.ReadAll(response.Body)
 
-        v := map[string]interface{}{}
-        err = json.Unmarshal(rbody, &v)
-        log.Debug("response body %v, %v", v, err)
+        accessData := map[string]interface{}{}
+        err = json.Unmarshal(responseBody, &accessData)
+        if err != nil {
+            log.Debug("access data json Unmarshal err: %v", err)
+        }
 
         // get user data
         userData := map[string]interface{}{}
-        responseGet, err := http.Get(fmt.Sprintf("https://www.googleapis.com/oauth2/v1/userinfo?access_token=%s", v["access_token"]))
+        responseGet, err := http.Get(fmt.Sprintf("https://www.googleapis.com/oauth2/v1/userinfo?access_token=%s", accessData["access_token"]))
+        if err != nil {
+            log.Debug("error on get user data: %v", err)
+        }
+
         responseGetBody, err := ioutil.ReadAll(responseGet.Body)
         err = json.Unmarshal(responseGetBody, &userData)
+        if err != nil {
+            log.Debug("user data json Unmarshal err: %v", err)
+        }
 
         log.Debug("user data = %v", userData)
 
         return
     }
 
+    // TODO: cosa succede se l'utente non acceta di l'authenticazione?
+    // redirect alla pagina di login o alla pagina / ?
     log.Debug("form google: %v", in.Form)
 }
