@@ -96,29 +96,32 @@ func main() {
     // spegnimento del server
     go muxer.getSignalAndClose(c)
 
-    muxer.HandleFuncNoAuth("POST", "/admin/user", core.NewUser)
+    //muxer.HandleFuncNoAuth("POST", "/admin/user", core.NewUser)
     muxer.HandleFunc("GET", "/admin/user/{id}", core.GetUser)
-    muxer.HandleFunc("GET", "/admin/user", core.GetUserAll)
-    muxer.HandleFunc("POST", "/admin/user/{id}", core.UpdateUser)
+    //muxer.HandleFunc("GET", "/admin/user", core.GetUserAll)
+    //muxer.HandleFunc("POST", "/admin/user/{id}", core.UpdateUser)
 
     muxer.HandleFunc("POST", "/admin/studio", core.NewStudio)
     muxer.HandleFunc("GET", "/admin/studio", core.GetStudioAll)
     muxer.HandleFunc("GET", "/admin/studio/{id}", core.GetStudio)
 
     muxer.HandleFunc("POST", "/admin/project", core.NewProject)
-//    muxer.HandleFunc("GET", "/admin/project", core.GetProjectAll)
-//    muxer.HandleFunc("GET", "/admin/project/{id}", core.GetProject)
+    muxer.HandleFunc("GET", "/admin/project", core.GetProjectAll)
+    muxer.HandleFunc("GET", "/admin/project/{id}", core.GetProject)
 
     muxer.HandleFuncNoAuth("GET", "/", webui.Root)
 
-    muxer.HandleFuncNoAuth("POST", "/login", core.Login)
-    muxer.HandleFuncNoAuth("GET", "/logout", core.Logout)
+    //muxer.HandleFuncNoAuth("POST", "/login", core.Login)
+    //muxer.HandleFuncNoAuth("GET", "/logout", core.Logout)
 
     jsHandler := http.StripPrefix("/js/", http.FileServer(http.Dir("/home/develop/go/src/mapo/webui/static/js")))
     muxer.Handle("GET", "/js/.*\\.js", jsHandler)
 
     cssHandler := http.StripPrefix("/css/", http.FileServer(http.Dir("/home/develop/go/src/mapo/webui/static/css")))
     muxer.Handle("GET", "/css/.*\\.css", cssHandler)
+
+    icoHandler := http.StripPrefix("/", http.FileServer(http.Dir("/home/develop/go/src/mapo/webui/static/image")))
+    muxer.Handle("GET", "/favicon\\.ico", icoHandler)
 
     // OAuth
     // su questo url viene reinderizato il cliente dopo che la procedura di authenticazione

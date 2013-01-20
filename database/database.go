@@ -46,11 +46,11 @@ func RestoreOne(data interface{}, filter bson.M, table string) error {
 }
 
 // RestoreList riprende dalla database una lista (tutti) di oggetti, senza alcun filtro
-func RestoreList(data interface{}, table string) error {
+func RestoreList(data interface{}, filter bson.M, table string) error {
 
     c := database.C(table)
 
-    err := c.Find(bson.M{}).All(data)
+    err := c.Find(filter).All(data)
 
     return err
 }

@@ -25,6 +25,12 @@ select {
     float: left;
 }
 
+td {
+	border: 1px solid black;
+	height: 50px;
+	padding: 15px;
+}
+
 .linkbox {
     width: 90px;
     padding: 0 5px 0 5px;
@@ -61,6 +67,7 @@ select {
     border: 1px solid black;
     padding: 10px;
     width: 600px;
+    float: left;
 }
 
 .error {

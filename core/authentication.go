@@ -11,17 +11,16 @@ import (
     "io/ioutil"
 )
 
-// RequestAuth richiede al client di autenticarsi
-// TODO: cancellare questa funzione se non servira
-func RequestAuth(out http.ResponseWriter) {
-    out.Header().Set("WWW-Authenticate", "Basic realm='mapomapo'")
-    out.WriteHeader(401)
-    fmt.Fprint(out, "not authorized!")
-}
-
 func Forbidden(out http.ResponseWriter) {
+    out.Header().Set("Content-Type","application/json;charset=UTF-8")
+
+    http.SetCookie(out, &http.Cookie{Name:"authid", Value: "", Path: "/"})
+    http.SetCookie(out, &http.Cookie{Name:"uid", Value: "", Path: "/"})
+
     out.WriteHeader(403)
-    fmt.Fprint(out, "not authorized!")
+    message := make(map[string][]string, 0)
+    message["authentication"] = []string{"invalid user"}
+    WriteJsonResult(out, message, "error")
 }
 
 // Authenticator, se attivo, verifica l'entita del utente che richiede una
@@ -31,16 +30,41 @@ func Authenticator(out http.ResponseWriter, in *http.Request) (http.ResponseWrit
 
     log.Msg("authenticate for %v", in.URL.Path)
 
-    if c, err := in.Cookie("authid"); err == nil {
-        authid := c.Value
-        log.Debug("authid = %v", authid)
+    var authidCookie, uidCookie *http.Cookie
+    var err error
+    if authidCookie, err = in.Cookie("authid"); err != nil {
+        Forbidden(out)
+        return out, in, false
+    }
+
+    if uidCookie, err = in.Cookie("uid"); err != nil {
+        Forbidden(out)
+        return out, in, false
+    }
+
+    log.Debug("authidCookie = %v \n uidCookie = %v", authidCookie, uidCookie)
+
+    uid := uidCookie.Value
+    authid := authidCookie.Value
+    log.Debug("authid = %v \n uid = %v", authid, uid)
+
+    cookie_secret, err := GlobalConfiguration.GetString("default", "cookiesecret")
+    if err != nil {
+        log.Debug("error gettiong cookie secret value %v", err)
+        Forbidden(out)
+        return out, in, false
+    }
+
+    if objectspace.Md5sum(uid+cookie_secret) == authid {
+
+        // ora verifchiamo se nella database esiste un utente con questo ID
         user := objectspace.NewUser()
-        filter := bson.M{"_id":authid}
-        err = user.Restore(filter)
+        err := user.Restore(bson.M{"_id":uid})
         if err == nil {
+
+            // se fin qua tutt e' a posto allora...
             in.ParseMultipartForm(0)
-            in.Form["currentuid"] = []string{user.GetId()}
-            log.Debug("form = %v", in.Form)
+            in.Form["currentuid"] = []string{uid}
             return out, in, true
         }
     }
@@ -48,43 +72,6 @@ func Authenticator(out http.ResponseWriter, in *http.Request) (http.ResponseWrit
     Forbidden(out)
     return out, in, false
 
-}
-
-// dipende dalla procedura usata, questa funzione potrebbe non
-// essere indinspensabile.
-func Login(out http.ResponseWriter, in *http.Request) {
-
-    errors := NewCoreErr()
-
-    in.ParseMultipartForm(0)
-    username := in.FormValue("username")
-    password := in.FormValue("password")
-
-    md5password := objectspace.Md5sum(password)
-
-    user := objectspace.NewUser()
-    filter := bson.M{"username":username}
-    err := user.Restore(filter)
-    if err != nil || user.Password != md5password {
-        errors.append("login", "wrong credentiales")
-        WriteJsonResult(out, errors, "error")
-        return
-    }
-
-    // TODO: a valid value for authentication cookie
-    authid := user.Id
-
-    http.SetCookie(out, &http.Cookie{Name:"authid", Value: authid, Path: "/"})
-
-    WriteJsonResult(out, nil, "ok")
-}
-
-// la funzione di deautenticazione non e' cosi semplice quando si usa il metodo
-// Authorization, il header WWW-Authenticate deve essere cancellato da un script
-// da parte del cliente.
-func Logout(out http.ResponseWriter, in *http.Request) {
-
-    fmt.Fprint(out, "logout")
 }
 
 // l'utente viene reindirizato verso questa funzione dopo la procedura
@@ -99,9 +86,10 @@ func OAuthCallBack(out http.ResponseWriter, in *http.Request) {
 
         code := in.FormValue("code")
 
-        var client_id, client_secret string
+        var client_id, client_secret, cookie_secret string
         client_id, err := GlobalConfiguration.GetString("googleoauth", "clientid")
         client_secret, err = GlobalConfiguration.GetString("googleoauth", "clientsecret")
+        cookie_secret, err = GlobalConfiguration.GetString("default", "cookiesecret")
         if len(client_id) < 1 || len(client_secret) < 1 {
             log.Debug("invalid configuration for OAuth")
             return
@@ -125,8 +113,7 @@ func OAuthCallBack(out http.ResponseWriter, in *http.Request) {
             log.Debug("access data json Unmarshal err: %v", err)
         }
 
-        // get user data
-        userData := map[string]interface{}{}
+        userData := objectspace.NewUser()
         responseGet, err := http.Get(fmt.Sprintf("https://www.googleapis.com/oauth2/v1/userinfo?access_token=%s", accessData["access_token"]))
         if err != nil {
             log.Debug("error on get user data: %v", err)
@@ -138,7 +125,37 @@ func OAuthCallBack(out http.ResponseWriter, in *http.Request) {
             log.Debug("user data json Unmarshal err: %v", err)
         }
 
+        userData.AccessToken = accessData["access_token"].(string)
+
+        userData.Oauthprovider = "google.com"
+        userData.CreateId()
+
+        // verifica se il utente esiste nella database
+        if tmpUser := objectspace.NewUser(); tmpUser.Restore(bson.M{"_id":userData.Id}) != nil {
+            err := userData.Save()
+            if err != nil {
+                log.Debug("on user save err = %v", err)
+                return
+            }
+            // user is loged in for first time
+        } else {
+            err := userData.Update()
+            if err != nil {
+                log.Debug("on user update err = %v", err)
+                return
+            }
+            // wellcom back user
+            // update user in database
+        }
+
         log.Debug("user data = %v", userData)
+
+        // TODO: a valid value for authentication cookie
+        authid := objectspace.Md5sum(userData.Id+cookie_secret)
+        http.SetCookie(out, &http.Cookie{Name:"authid", Value: authid, Path: "/"})
+
+        http.SetCookie(out, &http.Cookie{Name:"uid", Value: userData.Id, Path: "/"})
+        http.Redirect(out, in, "/", 302)
 
         return
     }
@@ -147,3 +164,4 @@ func OAuthCallBack(out http.ResponseWriter, in *http.Request) {
     // redirect alla pagina di login o alla pagina / ?
     log.Debug("form google: %v", in.Form)
 }
+

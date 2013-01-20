@@ -7,10 +7,6 @@ import (
     "net/http"
     "labix.org/v2/mgo/bson"
     "strings"
-
-//    // utilizo di questo paccheto e soltanto temporaniamente
-//    // per creare un id che poi avrà una funzione specifica
-//    "labix.org/v2/mgo/bson"
 )
 
 func NewStudio(out http.ResponseWriter, in *http.Request) {
@@ -23,7 +19,7 @@ func NewStudio(out http.ResponseWriter, in *http.Request) {
     // creamo un nuovo contenitore di tipo studio
     studio := objectspace.NewStudio()
 
-    name := ExtractSingleValue(in.Form, "name")
+    name := in.FormValue("name")
     err := studio.SetName(name)
     errors.append("name", err)
 
@@ -31,14 +27,13 @@ func NewStudio(out http.ResponseWriter, in *http.Request) {
     err = studio.AppendOwner(currentuid)
     errors.append("ownerid", err)
 
-    id := name
+    id := ExtractSingleValue(in.Form, "studioid")
     err = studio.SetId(id)
-    errors.append("id", err)
+    errors.append("studioid", err)
 
-    // update user
-    user := objectspace.NewUser()
-    err = user.SetId(currentuid)
-    errors.append("userid", err)
+    description := ExtractSingleValue(in.Form, "description")
+    err = studio.SetDescription(description)
+    errors.append("description", err)
 
     if len(errors) > 0 {
         WriteJsonResult(out, errors, "error")
@@ -52,30 +47,10 @@ func NewStudio(out http.ResponseWriter, in *http.Request) {
         return
     }
 
-    filter := bson.M{"_id":currentuid}
-    err = user.Restore(filter)
-    if err != nil {
-        errors.append("on restore", err)
-        WriteJsonResult(out, errors, "error")
-        return
-    }
-
-    err = user.AppendStudioId(studio.GetId())
-    errors.append("studioid", err)
-
-    err = user.Update()
-    errors.append("on user update", err)
-
-    if len(errors) > 0 {
-        WriteJsonResult(out, errors, "error")
-        return
-    }
-
     WriteJsonResult(out, studio, "ok")
 }
 
 func GetStudio(out http.ResponseWriter, in *http.Request) {
-    // create new studio
 
     errors := NewCoreErr()
 
@@ -88,46 +63,25 @@ func GetStudio(out http.ResponseWriter, in *http.Request) {
 
     currentuid := ExtractSingleValue(in.Form, "currentuid")
 
-    user := objectspace.NewUser()
+    studio, err := objectspace.StudioRestoreAll(bson.M{"owners":currentuid, "_id":id})
 
-    filter := bson.M{"_id":currentuid}
-    user.Restore(filter)
-
-    studiosid := user.GetStudiosId()
-    for _, sid := range(studiosid) {
-        if sid == id {
-            studio := objectspace.NewStudio()
-            filter := bson.M{"_id":id}
-            err := studio.Restore(filter)
-            if err != nil {
-                errors.append("on restore", err)
-                WriteJsonResult(out, errors, "error")
-                return
-            }
-            WriteJsonResult(out, studio, "ok")
-            return
-        }
+    if err != nil || len(studio) != 1 {
+        errors.append("on restore", "error on studio restore from database")
+        WriteJsonResult(out, errors, "error")
+        return
     }
-    errors.append("on restore", "no studio was found")
-    WriteJsonResult(out, errors, "error")
+
+    WriteJsonResult(out, studio[0], "ok")
 }
 
 func GetStudioAll(out http.ResponseWriter, in *http.Request) {
     // create new studio
     currentuid := ExtractSingleValue(in.Form, "currentuid")
 
-    user := objectspace.NewUser()
+    studios, err := objectspace.StudioRestoreAll(bson.M{"owners":currentuid})
 
-    filter := bson.M{"_id":currentuid}
-    user.Restore(filter)
-
-    studiosid := user.GetStudiosId()
-
-    WriteJsonResult(out, studiosid, "ok")
+    if err != nil {
+        WriteJsonResult(out, err, "error")
+    }
+    WriteJsonResult(out, studios, "ok")
 }
-
-//func UpdateStudio(inValues values) interface{} {
-//    // create new studio
-//    
-//    return nil
-//}

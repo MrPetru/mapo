@@ -11,6 +11,7 @@ import (
 type studio struct {
     Id string `bson:"_id"`
     Name string
+    Description string
     Owners []string
     Projects []string
 }
@@ -24,7 +25,7 @@ func NewStudio() studio {
 }
 
 func (s *studio) SetId(value string) error {
-    if len(value) < 4 {
+    if len(value) < 3 {
         return errors.New("troppo corto")
     }
     s.Id = value
@@ -41,6 +42,12 @@ func (s *studio) SetName(value string) error {
     }
 
     s.Name = value
+    return nil
+}
+
+func (s *studio) SetDescription(value string) error {
+    s.Description = value
+
     return nil
 }
 
@@ -75,6 +82,14 @@ func (s *studio) Restore(filter bson.M) error {
     err := database.RestoreOne(s, filter, "studios")
 
     return err
+}
+
+func StudioRestoreAll(filter bson.M) ([]studio, error) {
+    studioList := make([]studio,0)
+
+    err := database.RestoreList(&studioList, filter, "studios")
+
+    return studioList, err
 }
 
 func (s *studio) Update() error {

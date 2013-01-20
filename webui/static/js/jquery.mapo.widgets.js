@@ -16,6 +16,9 @@ mw.title = function(parent, text) {
 }
 
 mw.label = function(parent, text, cssClass) {
+   if (text == undefined || text == "") {
+       text = "None"
+   }
    var w = $("<div/>").text(text).appendTo(parent);
    w.addClass(cssClass);
 
@@ -104,33 +107,142 @@ mw.form = function(parent, action, method) {
     return w
 }
 
-mw.userProfile = function(parent, data) {
-    var w = mw.box(parent)
-
-    mw.title(w, "Profile Detailes")
-    mw.label(w, "ID:", "label");
-    mw.label(w, data["Id"], "value")
-
-    mw.label(w, "USERNAME:", "label");
-    mw.label(w, data["Username"], "value")
-
-    mw.label(w, "FIRST NAME:", "label");
-    mw.label(w, data["Firstname"], "value")
-    mw.label(w, "LAST NAME:", "label");
-    mw.label(w, data["Lastname"], "value")
-
-    mw.label(w, "DESCRIPTION:", "label");
-    mw.label(w, data["Description"] || "no description", "value")
-
-    mw.label(w, "RATING:", "label");
-    mw.label(w, data["Rating"], "value")
-
-    mw.label(w, "STUDIOS:", "label");
-    mw.label(w, data["Studios"], "value")
+mw.image = function(parent, path, width, height) {
+    var w = $("<img/>", {src:path, width:width, height:height}).appendTo(parent);
 
     return w
 }
 
+mw.table = function(parent) {
+    var w = $("<table/>").appendTo(parent)
+
+    return w
+}
+
+mw.tablerow = function(parent) {
+    var w = $("<tr/>").appendTo(parent)
+
+    return w
+}
+
+mw.tablecell = function(parent, data) {
+    var w = $("<td/>").appendTo(parent)
+
+    if (data != undefined) {
+        w.text(data)
+    }
+
+    return w
+}
+
+mw.userProfile = function(parent, data) {
+    var w = mw.box(parent)
+
+    mw.title(w, "Profile Detailes")
+
+    mw.label(w, "ID:", "label");
+    mw.label(w, data["Id"], "value")
+
+    mw.label(w, "NAME:", "label");
+    mw.label(w, data["Name"], "value")
+
+    mw.label(w, "EMAIL:", "label");
+    mw.label(w, data["Email"], "value")
+
+    mw.label(w, "OAUTH PROVIDER:", "label");
+    mw.label(w, data["Oauthprovider"], "value")
+
+    mw.label(w, "OAUTH ID:", "label");
+    mw.label(w, data["id"], "value")
+
+    mw.label(w, "AVATAR:", "label");
+    mw.image(w, data["picture"], 128, 128)
+
+    return w
+}
+
+mw.studio = function(parent, data) {
+    var w = mw.box(parent)
+    mw.title(w, data["Name"])
+
+    mw.label(w, "ID:", "label")
+    mw.label(w, data["Id"])
+    mw.label(w, "DESCRIPTION:", "label")
+    mw.label(w, data["Description"])
+    mw.label(w, "OWNERS ID:", "label")
+    mw.label(w, data["Owners"])
+    mw.label(w, "PROJECTS:", "label")
+    mw.label(w, data["Projects"])
+
+    return w
+}
+
+mw.studioList = function(parent, data) {
+    var w = mw.table(parent)
+
+    mw.title(w, "List User Studio")
+
+    header = mw.tablerow(w)
+    mw.tablecell(header, "ID")
+    mw.tablecell(header, "NAME")
+    mw.tablecell(header, "DESCRIPTION")
+    mw.tablecell(header, "OWNERS")
+    mw.tablecell(header, "PROJECTS")
+
+    for (s in data) {
+        var row = mw.tablerow(w)
+        row.click((function(v) {return function() {getStudio(v)}})(data[s]["Id"]))
+        for (c in data[s]) {
+            cel = mw.tablecell(row)
+            mw.label(cel, data[s][c])
+        }
+    }
+
+    return w
+}
+
+mw.projectList = function(parent, data) {
+    var w = mw.table(parent)
+
+    mw.title(w, "List User Studio")
+
+    header = mw.tablerow(w)
+    mw.tablecell(header, "ID")
+    mw.tablecell(header, "NAME")
+    mw.tablecell(header, "DESCRIPTION")
+    mw.tablecell(header, "ADMINS")
+    mw.tablecell(header, "SUPERVISORS")
+    mw.tablecell(header, "ARTISTS")
+
+    for (s in data) {
+        var row = mw.tablerow(w)
+        row.click((function(v) {return function() {getProject(v)}})(data[s]["Id"]))
+        for (c in data[s]) {
+            cel = mw.tablecell(row)
+            mw.label(cel, data[s][c])
+        }
+    }
+
+    return w
+}
+
+mw.project = function(parent, data) {
+    var w = mw.box(parent)
+    mw.title(w, data["Name"])
+
+    mw.label(w, "ID:", "label")
+    mw.label(w, data["Id"])
+    mw.label(w, "DESCRIPTION:", "label")
+    mw.label(w, data["Description"])
+    mw.label(w, "ADMINS:", "label")
+    mw.label(w, data["Admins"])
+    mw.label(w, "SUPERVISORS:", "label")
+    mw.label(w, data["Supervisors"])
+    mw.label(w, "ARTISTS:", "label")
+    mw.label(w, data["Artists"])
+
+    return w
+}
 
 // helpers
 
