@@ -18,11 +18,6 @@ type ServeMux struct {
     // lista dei handler registrati, con o senza autenticazione
     m map[string]Handler
 
-    // se non è nil, contiene la funzione autentifica il utente che fa la richiesta
-    // questo identiticatore si usarà di seguito per registrare dei handeler che hanno
-    // bisogno di autenticazione.
-    authenticator func(http.ResponseWriter, *http.Request) (http.ResponseWriter, *http.Request, bool)
-
     // il numero delle connessione attive in questo momento
     current_connections int
     lock sync.Mutex
@@ -31,48 +26,8 @@ type ServeMux struct {
     closing bool
 }
 
-type handlerWithAuthentication struct {
-    f func(http.ResponseWriter, *http.Request)
-    auth func(http.ResponseWriter, *http.Request) (http.ResponseWriter, *http.Request, bool)
-}
-func (hwa handlerWithAuthentication) ServeHTTP(out http.ResponseWriter, in *http.Request) {
-    if hwa.auth != nil {
-        if o, i, ok := hwa.auth(out, in); ok {
-            hwa.f(o, i)
-        }
-    } else {
-        hwa.f(out, in)
-    }
-}
-
-type handlerWithoutAuthentication func(http.ResponseWriter, *http.Request)
-func (hwoa handlerWithoutAuthentication) ServeHTTP(out http.ResponseWriter, in *http.Request) {
-    hwoa(out, in)
-}
-
-// SetAuthenticator allega al mux una funzione da noi definita che si userà
-// per autenticare il utente che fa la richeista.
-func (mux *ServeMux) SetAuthenticator(auth func(http.ResponseWriter, *http.Request) (http.ResponseWriter, *http.Request, bool)) {
-    mux.authenticator = auth
-}
-
-// Handler registra un handler che di defautl usa l'autenticazione.
-func (mux *ServeMux) HandleFunc(method, path string, handle func(http.ResponseWriter, *http.Request) ) {
-
-    handlerFunc := new(handlerWithAuthentication)
-    handlerFunc.auth = mux.authenticator
-    handlerFunc.f = handle
-
-    pattern := createPattern(method, path)
-
-    mux.m[pattern] = handlerFunc
-}
-
-// HandleFuncNoAuth registra in modo explicito un handler che non ha bisogno
-// di un autente autenticato.
-func (mux *ServeMux) HandleFuncNoAuth(method, path string, handle func(http.ResponseWriter, *http.Request) ) {
-
-    handlerFunc := new(handlerWithoutAuthentication)
+func (mux *ServeMux) HandleFunc(method, path string, handle func(http.ResponseWriter, *http.Request)) {
+    handlerFunc := new(http.HandlerFunc)
     *handlerFunc = handle
 
     pattern := createPattern(method, path)

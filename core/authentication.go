@@ -26,51 +26,54 @@ func Forbidden(out http.ResponseWriter) {
 // Authenticator, se attivo, verifica l'entita del utente che richiede una
 // risorsa. La verifica aviene atraverso il processo di login o procedimenti
 // simile che restano da concordare, come per esempio OAuth.
-func Authenticator(out http.ResponseWriter, in *http.Request) (http.ResponseWriter, *http.Request, bool) {
+func Authenticate(handleFunc func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 
-    log.Msg("authenticate for %v", in.URL.Path)
+    return func(out http.ResponseWriter, in *http.Request) {
+        log.Msg("authenticate for %v", in.URL.Path)
 
-    var authidCookie, uidCookie *http.Cookie
-    var err error
-    if authidCookie, err = in.Cookie("authid"); err != nil {
-        Forbidden(out)
-        return out, in, false
-    }
-
-    if uidCookie, err = in.Cookie("uid"); err != nil {
-        Forbidden(out)
-        return out, in, false
-    }
-
-    log.Debug("authidCookie = %v \n uidCookie = %v", authidCookie, uidCookie)
-
-    uid := uidCookie.Value
-    authid := authidCookie.Value
-    log.Debug("authid = %v \n uid = %v", authid, uid)
-
-    cookie_secret, err := GlobalConfiguration.GetString("default", "cookiesecret")
-    if err != nil {
-        log.Debug("error gettiong cookie secret value %v", err)
-        Forbidden(out)
-        return out, in, false
-    }
-
-    if objectspace.Md5sum(uid+cookie_secret) == authid {
-
-        // ora verifchiamo se nella database esiste un utente con questo ID
-        user := objectspace.NewUser()
-        err := user.Restore(bson.M{"_id":uid})
-        if err == nil {
-
-            // se fin qua tutt e' a posto allora...
-            in.ParseMultipartForm(0)
-            in.Form["currentuid"] = []string{uid}
-            return out, in, true
+        var authidCookie, uidCookie *http.Cookie
+        var err error
+        if authidCookie, err = in.Cookie("authid"); err != nil {
+            Forbidden(out)
+            return
         }
-    }
 
-    Forbidden(out)
-    return out, in, false
+        if uidCookie, err = in.Cookie("uid"); err != nil {
+            Forbidden(out)
+            return
+        }
+
+        log.Debug("authidCookie = %v \n uidCookie = %v", authidCookie, uidCookie)
+
+        uid := uidCookie.Value
+        authid := authidCookie.Value
+        log.Debug("authid = %v \n uid = %v", authid, uid)
+
+        cookie_secret, err := GlobalConfiguration.GetString("default", "cookiesecret")
+        if err != nil {
+            log.Debug("error gettiong cookie secret value %v", err)
+            Forbidden(out)
+            return
+        }
+
+        if objectspace.Md5sum(uid+cookie_secret) == authid {
+
+            // ora verifchiamo se nella database esiste un utente con questo ID
+            user := objectspace.NewUser()
+            err := user.Restore(bson.M{"_id":uid})
+            if err == nil {
+
+                // se fin qua tutt e' a posto allora...
+                in.ParseMultipartForm(0)
+                in.Form["currentuid"] = []string{uid}
+                handleFunc(out, in)
+                return
+            }
+        }
+
+        Forbidden(out)
+        return
+    }
 
 }
 

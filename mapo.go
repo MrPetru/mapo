@@ -79,9 +79,6 @@ func main() {
     // handler usando come descrizione anche il metodo http tipo GET o POST.
     muxer := NewServeMux()
 
-    // qui si assegna al muxer la funzione che sara' usata per l'autenticazione
-    muxer.SetAuthenticator(core.Authenticator)
-
     server := &http.Server {
         Addr:   ":8081",
         Handler: muxer,
@@ -96,23 +93,20 @@ func main() {
     // spegnimento del server
     go muxer.getSignalAndClose(c)
 
-    //muxer.HandleFuncNoAuth("POST", "/admin/user", core.NewUser)
-    muxer.HandleFunc("GET", "/admin/user/{id}", core.GetUser)
-    //muxer.HandleFunc("GET", "/admin/user", core.GetUserAll)
-    //muxer.HandleFunc("POST", "/admin/user/{id}", core.UpdateUser)
+    muxer.HandleFunc("GET", "/admin/user/{id}", core.Authenticate(core.GetUser))
 
-    muxer.HandleFunc("POST", "/admin/studio", core.NewStudio)
-    muxer.HandleFunc("GET", "/admin/studio", core.GetStudioAll)
-    muxer.HandleFunc("GET", "/admin/studio/{id}", core.GetStudio)
+    muxer.HandleFunc("POST", "/admin/studio", core.Authenticate(core.NewStudio))
+    muxer.HandleFunc("GET", "/admin/studio", core.Authenticate(core.GetStudioAll))
+    muxer.HandleFunc("GET", "/admin/studio/{id}", core.Authenticate(core.GetStudio))
 
-    muxer.HandleFunc("POST", "/admin/project", core.NewProject)
-    muxer.HandleFunc("GET", "/admin/project", core.GetProjectAll)
-    muxer.HandleFunc("GET", "/admin/project/{id}", core.GetProject)
+    muxer.HandleFunc("POST", "/admin/project", core.Authenticate(core.NewProject))
+    muxer.HandleFunc("GET", "/admin/project", core.Authenticate(core.GetProjectAll))
+    muxer.HandleFunc("GET", "/admin/project/{id}", core.Authenticate(core.GetProject))
 
-    muxer.HandleFuncNoAuth("GET", "/", webui.Root)
+    muxer.HandleFunc("GET", "/", webui.Root)
 
-    //muxer.HandleFuncNoAuth("POST", "/login", core.Login)
-    //muxer.HandleFuncNoAuth("GET", "/logout", core.Logout)
+    //muxer.HandleFunc("POST", "/login", core.Login)
+    //muxer.HandleFunc("GET", "/logout", core.Logout)
 
     jsHandler := http.StripPrefix("/js/", http.FileServer(http.Dir("/home/develop/go/src/mapo/webui/static/js")))
     muxer.Handle("GET", "/js/.*\\.js", jsHandler)
@@ -126,7 +120,7 @@ func main() {
     // OAuth
     // su questo url viene reinderizato il cliente dopo che la procedura di authenticazione
     // sul server del servizio aviene con successo o meno.
-    muxer.HandleFuncNoAuth("GET", "/oauth2callback", core.OAuthCallBack)
+    muxer.HandleFunc("GET", "/oauth2callback", core.OAuthCallBack)
 
     log.Info("start listening for requests")
 
