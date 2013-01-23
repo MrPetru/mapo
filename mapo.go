@@ -25,6 +25,7 @@ import (
     "mapo/log"
     "mapo/core"
     "mapo/webui"
+    "mapo/api"
 
     "net/http"
     "os"
@@ -33,7 +34,7 @@ import (
     "flag"
 )
 
-// main risponde del avvio del'applicazione e della sua
+// main risponde del avvio dell'applicazione e della sua
 // registrazione come server in ascolto su la rete.
 func main() {
 
@@ -51,11 +52,28 @@ func main() {
         return
     }
 
-    // istruiamo la database di creare una nuova connessione.
-    // specificandoli a quale database si deve collegare
-    // TODO: qunado il database viene creato per la prima volta, ci dobbiamo
-    // assigurare che abbiamo descrito il campo usernaeme come un campo con dei valori
-    // unici.
+    /*
+    in questa configurazione, connessione alla database viene attivata in un
+    oggetto definito globalmente al interno del modulo database.
+    L'idea originale per Mapo è di creare un oggetto che contenga la
+    connessione attiva e passare questo aggetto a tutte le funzione che ne
+    hanno bisogno di fare una richiesta alla database.
+
+    Passare l'oggetto database da una funzione ad altra, potrebbe
+    significare, creare una catena dalla prima funzione all'ultima. Che
+    avvolte non fa niente altro che aumentare il numero dei parametri passati
+    da una funzione ad altra. Per esempio, la connessione al database si usa
+    nel modulo objectspace che viene chiamato dal modulo core che al suo tempo
+    viene chiamato da main. Inutile passare questo oggetto al modulo core,
+    visto che li lui non serve.
+
+    NOTA: accesso ai oggetti globali deve essere in qualche modo sincronizzato
+    per evitare i problemi di inconsistenza.
+
+    NOTA: le osservazioni dimostrano che avendo una connessione attiva alla
+    database che poi viene riutilizzata, diminuisce considerevolmente i tempi di
+    interrogazione.
+    */
     err = database.NewConnection("mapo")
     if err != nil {
         log.Info("error connecting to database (%v)", err)
@@ -66,11 +84,18 @@ func main() {
     // al avvio del'applicazione si verifica la disponibilità dei addon
     // e si crea una lista globale che sarà passata verso altri moduli
     // TODO: modulo addon ancora da implementare
+
+    /*
+    anche qui il discorso è molto simile a quello della connessione alla
+    database.
+    Passare l'oggetto addons nella catena per arrivare al punto di destinazione
+    potrebbe creare dei disagi.
+    */
     addons := addon.GetAll()
     addons = addons
     log.Msg("load addons and generate a list")
 
-    // al momento del spegnimento del'applicazione potremo trovarci con delle
+    // al momento del spegnimento dell'applicazione potremo trovarci con delle
     // connessione attive dal parte del cliente. Il handler personalizzato usato
     // qui, ci permette di dire al server di spegnersi ma prima deve aspettare
     // che tutte le richieste siano processate e la connessione chiusa.
@@ -89,19 +114,22 @@ func main() {
     c := make(chan os.Signal, 1)
     signal.Notify(c, syscall.SIGINT)
 
-    // aviamo in una nuova gorutine la funzione che ascoltera per il segnale di
+    // aviamo in una nuova gorutine la funzione che ascolterà per il segnale di
     // spegnimento del server
     go muxer.getSignalAndClose(c)
 
-    muxer.HandleFunc("GET", "/admin/user/{id}", core.Authenticate(core.GetUser))
+    muxer.HandleFunc("GET", "/admin/user/{uid}", core.Authenticate(core.GetUser))
 
     muxer.HandleFunc("POST", "/admin/studio", core.Authenticate(core.NewStudio))
     muxer.HandleFunc("GET", "/admin/studio", core.Authenticate(core.GetStudioAll))
-    muxer.HandleFunc("GET", "/admin/studio/{id}", core.Authenticate(core.GetStudio))
+    muxer.HandleFunc("GET", "/admin/studio/{sid}", core.Authenticate(core.GetStudio))
 
     muxer.HandleFunc("POST", "/admin/project", core.Authenticate(core.NewProject))
     muxer.HandleFunc("GET", "/admin/project", core.Authenticate(core.GetProjectAll))
-    muxer.HandleFunc("GET", "/admin/project/{id}", core.Authenticate(core.GetProject))
+    muxer.HandleFunc("GET", "/admin/project/{pid}", core.Authenticate(core.GetProject))
+
+    muxer.HandleFunc("GET", "/api/{pid}", core.Authenticate(core.GetProject))
+    muxer.HandleFunc("GET", "/api/{pid}/.*", core.Authenticate(api.HttpWrapper))
 
     muxer.HandleFunc("GET", "/", webui.Root)
 
@@ -127,5 +155,4 @@ func main() {
     // avviamo il server che processerà le richieste
     log.Msg("close server with message: %v", server.ListenAndServe())
 }
-
 

@@ -1,16 +1,21 @@
 package core
 
 import (
+    "mapo/objectspace"
+	"mapo/log"
+
     "net/http"
     "net/url"
-    "mapo/log"
     "fmt"
     "encoding/json"
-    "mapo/objectspace"
-    "labix.org/v2/mgo/bson"
     "io/ioutil"
 )
 
+/*
+Forbidden, una scorciatoia usata per ritornare al cliente il messaggio che lui
+non e' autorizzato ad accedere questa risorsa o probabilmente che lui non ha
+fatto login.
+*/
 func Forbidden(out http.ResponseWriter) {
     out.Header().Set("Content-Type","application/json;charset=UTF-8")
 
@@ -18,14 +23,33 @@ func Forbidden(out http.ResponseWriter) {
     http.SetCookie(out, &http.Cookie{Name:"uid", Value: "", Path: "/"})
 
     out.WriteHeader(403)
-    message := make(map[string][]string, 0)
-    message["authentication"] = []string{"invalid user"}
-    WriteJsonResult(out, message, "error")
+    WriteJsonResult(out, "not authorised", "error")
 }
 
 // Authenticator, se attivo, verifica l'entita del utente che richiede una
 // risorsa. La verifica aviene atraverso il processo di login o procedimenti
 // simile che restano da concordare, come per esempio OAuth.
+
+/*
+Authenticate, un wrapper che aiuta a registrare dei handler che sono protetti,
+i handler che hanno bisogno che i utenti siano autentificati.
+
+il processo di autenticazione avviene attraverso dei cookie di sessione (validi
+soltanto fino alla chiusura del browser). I cookie vengono creati alla fine
+della procedura di autenticazione guidata dal "Identity Provider"
+
+oauth - un codice che si usa per dimostrare che l'utente che fa la richiesta e
+lui.
+
+uid - l'id del cliente corrente
+
+sid - l'id dello studio attivo
+
+pid - l'id del progetto attivo
+
+questi dato poi vengono passati al handler insieme a tutti i dati della
+richiesta (per il momento sono inseriti direttamente in Form)
+*/
 func Authenticate(handleFunc func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 
     return func(out http.ResponseWriter, in *http.Request) {
@@ -60,11 +84,11 @@ func Authenticate(handleFunc func(http.ResponseWriter, *http.Request)) func(http
 
             // ora verifchiamo se nella database esiste un utente con questo ID
             user := objectspace.NewUser()
-            err := user.Restore(bson.M{"_id":uid})
+            user.SetId(uid)
+            err := user.Restore()
             if err == nil {
 
                 // se fin qua tutt e' a posto allora...
-                in.ParseMultipartForm(0)
                 in.Form["currentuid"] = []string{uid}
                 handleFunc(out, in)
                 return
@@ -77,11 +101,13 @@ func Authenticate(handleFunc func(http.ResponseWriter, *http.Request)) func(http
 
 }
 
-// l'utente viene reindirizato verso questa funzione dopo la procedura
-// di autenticazione guidata da google.
-func OAuthCallBack(out http.ResponseWriter, in *http.Request) {
+/*
+l'utente viene reindirizzato verso questa funzione dopo la procedura
+di autenticazione guidata da google.
 
-    in.ParseMultipartForm(0)
+TODO: raffinare questa funzione
+*/
+func OAuthCallBack(out http.ResponseWriter, in *http.Request) {
 
     // nel caso che l'utente non consente l'accesso ai suoi dati, il dati ricevuti
     // da questa funzione contera una mapa che avra la chiave "error"
@@ -100,7 +126,11 @@ func OAuthCallBack(out http.ResponseWriter, in *http.Request) {
 
         // ora che abbiamo il permesso del utente chediamo a google il acces_token per poter
         // accedere ai deti del utente
-        postData := url.Values{"code":{code}, "client_id":{client_id}, "client_secret":{client_secret}, "redirect_uri":{"http://localhost:8081/oauth2callback"}, "grant_type":{"authorization_code"}}
+        postData := url.Values{"code":{code}, "client_id":{client_id},
+                "client_secret":{client_secret},
+                "redirect_uri":{"http://localhost:8081/oauth2callback"},
+                "grant_type":{"authorization_code"}}
+
         response, err := http.PostForm("https://accounts.google.com/o/oauth2/token", postData)
         if err != nil {
             log.Debug("get token error %v", err)
@@ -134,7 +164,7 @@ func OAuthCallBack(out http.ResponseWriter, in *http.Request) {
         userData.CreateId()
 
         // verifica se il utente esiste nella database
-        if tmpUser := objectspace.NewUser(); tmpUser.Restore(bson.M{"_id":userData.Id}) != nil {
+        if tmpUser := userData; tmpUser.Restore() != nil {
             err := userData.Save()
             if err != nil {
                 log.Debug("on user save err = %v", err)

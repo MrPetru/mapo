@@ -6,14 +6,13 @@ import (
 
     "net/http"
     "labix.org/v2/mgo/bson"
-    "strings"
 )
 
+// NewStudio crea un nuovo studio
 func NewStudio(out http.ResponseWriter, in *http.Request) {
     // create new studio
     log.Msg("executing NewStudio function")
 
-    //in.ParseForm()
     errors := NewCoreErr()
 
     // creamo un nuovo contenitore di tipo studio
@@ -23,15 +22,15 @@ func NewStudio(out http.ResponseWriter, in *http.Request) {
     err := studio.SetName(name)
     errors.append("name", err)
 
-    currentuid := ExtractSingleValue(in.Form, "currentuid")
+    currentuid := in.FormValue("currentuid")
     err = studio.AppendOwner(currentuid)
     errors.append("ownerid", err)
 
-    id := ExtractSingleValue(in.Form, "studioid")
+    id := in.FormValue("studioid")
     err = studio.SetId(id)
     errors.append("studioid", err)
 
-    description := ExtractSingleValue(in.Form, "description")
+    description := in.FormValue("description")
     err = studio.SetDescription(description)
     errors.append("description", err)
 
@@ -50,18 +49,19 @@ func NewStudio(out http.ResponseWriter, in *http.Request) {
     WriteJsonResult(out, studio, "ok")
 }
 
+// GetStudio restituisce al utente le informazioni di un solo progetto
 func GetStudio(out http.ResponseWriter, in *http.Request) {
 
     errors := NewCoreErr()
 
-    id := strings.Split(in.URL.Path[1:], "/")[2]
+    id := in.FormValue("sid")
     if len(id) == 0 {
         errors.append("id", "no studio id was provided")
         WriteJsonResult(out, errors, "error")
         return
     }
 
-    currentuid := ExtractSingleValue(in.Form, "currentuid")
+    currentuid := in.FormValue("currentuid")
 
     studio, err := objectspace.StudioRestoreAll(bson.M{"owners":currentuid, "_id":id})
 
@@ -74,9 +74,11 @@ func GetStudio(out http.ResponseWriter, in *http.Request) {
     WriteJsonResult(out, studio[0], "ok")
 }
 
+// GetStudioAll restituisce al cliente le informazioni di piu' progetti in una
+// lista
 func GetStudioAll(out http.ResponseWriter, in *http.Request) {
     // create new studio
-    currentuid := ExtractSingleValue(in.Form, "currentuid")
+    currentuid := in.FormValue("currentuid")
 
     studios, err := objectspace.StudioRestoreAll(bson.M{"owners":currentuid})
 

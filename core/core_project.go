@@ -1,17 +1,18 @@
 package core
 
 import (
-    "net/http"
     "mapo/objectspace"
+
+    "net/http"
     "labix.org/v2/mgo/bson"
-    "strings"
 )
 
+/*
+NewProject crea un nuovo progetto.
+*/
 func NewProject(out http.ResponseWriter, in *http.Request) {
 
     errors := NewCoreErr()
-
-    in.ParseForm()
 
     project := objectspace.NewProject()
 
@@ -23,7 +24,6 @@ func NewProject(out http.ResponseWriter, in *http.Request) {
     err = project.SetDescription(description)
     errors.append("description", err)
 
-    //var studioID string // get studio ID
     sidCookie, err := in.Cookie("sid")
     studioID := sidCookie.Value
 
@@ -31,7 +31,7 @@ func NewProject(out http.ResponseWriter, in *http.Request) {
     err = studio.SetId(studioID)
     errors.append("studioid", err)
 
-    err = studio.Restore(bson.M{"_id":studioID})
+    err = studio.Restore()
     errors.append("on studio restore", err)
 
     if len(errors) > 0 {
@@ -42,6 +42,8 @@ func NewProject(out http.ResponseWriter, in *http.Request) {
     id := objectspace.Md5sum(studioID + name)
     err = project.SetId(id)
     errors.append("id", err)
+
+    project.SetStudioId(studioID)
 
     _ = studio.AppendProject(id)
     err = studio.Update()
@@ -62,6 +64,10 @@ func NewProject(out http.ResponseWriter, in *http.Request) {
     WriteJsonResult(out, project, "ok")
 }
 
+/*
+GetProjectAll restituisce al cliente una lista di progetti per il studio attivo
+nella sessione del utente.
+*/
 func GetProjectAll(out http.ResponseWriter, in *http.Request) {
 
     errors := NewCoreErr()
@@ -74,14 +80,7 @@ func GetProjectAll(out http.ResponseWriter, in *http.Request) {
     }
     studioID := sidCookie.Value
 
-    studio := objectspace.NewStudio()
-    studio.SetId(studioID)
-
-    studio.Restore(bson.M{"_id":studioID})
-
-    projects := studio.Projects
-
-    filter := bson.M{"_id":bson.M{"$in":projects}}
+    filter := bson.M{"studioid":studioID}
 
     projectlist, err := objectspace.ProjectRestorList(filter)
 
@@ -92,11 +91,14 @@ func GetProjectAll(out http.ResponseWriter, in *http.Request) {
     WriteJsonResult(out, projectlist, "ok")
 }
 
+/*
+GetProject restituisce al utente le informazioni di un singolo progetto.
+*/
 func GetProject(out http.ResponseWriter, in *http.Request) {
 
     errors := NewCoreErr()
 
-    id := strings.Split(in.URL.Path[1:], "/")[2]
+    id := in.FormValue("pid")
     if len(id) == 0 {
         errors.append("id", "no project id was provided")
         WriteJsonResult(out, errors, "error")
@@ -112,10 +114,9 @@ func GetProject(out http.ResponseWriter, in *http.Request) {
 
     sid := sidCookie.Value
 
-    studioFilter := bson.M{"projects":id}
-
     studio := objectspace.NewStudio()
-    err = studio.Restore(studioFilter)
+    studio.SetId(sid)
+    err = studio.Restore()
     if err != nil {
         return
     }
@@ -125,7 +126,8 @@ func GetProject(out http.ResponseWriter, in *http.Request) {
     }
 
     project := objectspace.NewProject()
-    err = project.Restore(bson.M{"_id":id})
+    project.SetId(id)
+    err = project.Restore()
     if err != nil {
         return
     }

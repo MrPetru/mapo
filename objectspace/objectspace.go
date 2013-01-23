@@ -1,6 +1,5 @@
 /*
-objectspace contiene la definizione dei oggetti che poi verranno usati al interno
-dell'applicazione.
+objectspace contiene la definizione dei oggetti come User, Studio, Project
 */
 package objectspace
 
@@ -9,12 +8,12 @@ import (
     "crypto/md5"
 )
 
+// crea la soma md5 di una stringa
 func Md5sum(value string) string {
     sum := md5.New()
     sum.Write([]byte(value))
 
     result := fmt.Sprintf("%x", sum.Sum(nil))
 
-    //fmt.Printf("md5sum is %s\n", result)
     return result
 }

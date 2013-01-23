@@ -7,6 +7,7 @@ import (
     "labix.org/v2/mgo/bson"
 )
 
+// un oggetto globale che contiene una connessione attiva con la database.
 var database *mgo.Database
 
 // TODO: definire una funzione che si occupa con la creazione e gestione della

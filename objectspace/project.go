@@ -12,9 +12,12 @@ type project struct {
     Id string `bson:"_id"`
     Name string
     Description string
+    StudioId string
     Admins []string
     Supervisors []string
     Artists []string
+
+    Addons []string `json:"-"`
 }
 
 func NewProject() project {
@@ -41,21 +44,18 @@ func (p *project) SetDescription(value string) error {
     return nil
 }
 
-//func (p *project) SetStudio(value string) error {
-//    if len(value) > 6 {
-//        p.Studio = value
-//        return nil
-//    }
-//
-//    return errors.New("nome studio tropo corto")
-//}
-
 func (p *project) SetId(value string) error {
 
     if len(value) < 32 {
         return errors.New("troppo corto")
     }
     p.Id = value
+    return nil
+}
+
+func (p *project) SetStudioId(value string) error {
+    p.StudioId = value
+
     return nil
 }
 
@@ -77,13 +77,19 @@ func ProjectRestorList(filter bson.M) ([]project, error) {
     return p, nil
 }
 
-func (p *project) Restore(filter bson.M) error {
+func (p *project) Restore() error {
 
-    err := database.RestoreOne(&p, filter, "projects")
+    err := database.RestoreOne(&p, bson.M{"_id":p.Id}, "projects")
 
     if err != nil {
         return err
     }
 
     return nil
+}
+
+// ritorna dal database la lista dei addon attivi per il progetto
+func (p *project) GetAddonList() []string {
+
+    return p.Addons
 }

@@ -11,12 +11,20 @@ import (
     "net/http"
 )
 
-// handler, personalizzato per il server http che ci permetterà di spegnere
-// l'applicazione senza rischi o corruzione dei dati.
+/*
+ServeMux, nasce dalla necessita di registrare dei handler differenziati anche
+dal metodo http usato durante la richiesta dal parte del utente. Cosi lo stesso
+url usato con il metodo POST ha un funzionamento diverso da una richiesta dove
+si usa il metodo GET.
+
+Un altra possibilità che ci offre questo handler personalizzato è di poter
+interrompere il server usando la combinazione dei tasti CTRL+C
+*/
 type ServeMux struct {
 
     // lista dei handler registrati, con o senza autenticazione
     m map[string]Handler
+    mVars map[string]map[int]string
 
     // il numero delle connessione attive in questo momento
     current_connections int
@@ -33,15 +41,19 @@ func (mux *ServeMux) HandleFunc(method, path string, handle func(http.ResponseWr
     pattern := createPattern(method, path)
 
     mux.m[pattern] = handlerFunc
+    mux.mVars[pattern] = createUrlVars(path)
 }
 
 func (mux *ServeMux) Handle(method, path string, handler Handler) {
     pattern := createPattern(method, path)
     mux.m[pattern] = handler
+    mux.mVars[pattern] = createUrlVars(path)
 }
 
-// createPattern, per il momento è una funzione limitata a creare la regola
-// in base a quale si andrà a verificare se il path corisponde a un certo handler.
+/*
+createPattern, crea l'espressione regulare che si usa più tardi per trovare
+il handler corretto per il path/risorsa richiesta.
+*/
 func createPattern(method, path string) string {
     pattern := "(?i)^"
 
@@ -65,9 +77,34 @@ func createPattern(method, path string) string {
     return pattern
 }
 
-// match è usata nel processo di identificazione delle handler necessario da
-// eseguire per una certa risorsa identificata dal url.
-func (mux *ServeMux) match(r *http.Request) Handler {
+/*
+createUrlVars, mappa le variabili inserite del url inserite al momento della
+registrazione del handler. Le variabili sono segnati con le parentesi graffe
+al interno delle quali si trova il nome della variabile. Questa mappa sarà usata
+più tardi per passare i dati a forma di copie (chiave:valore) ai handler.
+*/
+func createUrlVars(path string) map[int]string {
+    vlist := strings.Split(path, "/")
+
+    data := make(map[int]string,0)
+
+    for i, v := range(vlist) {
+        if len(v) < 3 {
+            continue
+        }
+        if v[0] == '{' && v[len(v)-1] == '}' {
+            data[i] = v[1:len(v)-1]
+        }
+    }
+
+    return data
+}
+
+/*
+match, è usata per identificare quale dei handler corrisponde per un certo url.
+Questa funzione fa utilizzo dei pattern (espressioni regolari).
+*/
+func (mux *ServeMux) match(r *http.Request) (Handler, string) {
     method := r.Method
     url := r.URL.Path
 
@@ -76,32 +113,39 @@ func (mux *ServeMux) match(r *http.Request) Handler {
     }
 
     var handler Handler
+    var pattern string
 
     for k, v := range(mux.m) {
         matching, _ := regexp.MatchString(k, method + ":" + url)
         if matching {
             handler = v
+            pattern = k
             break
         }
     }
 
     if handler != nil {
-        return handler
+        return handler, pattern
     }
-    return http.NotFoundHandler()
+    return http.NotFoundHandler(), ""
 }
 
-// NewServeMux restituisce un nuovo mux, molto simile al mux originale del
-// modulo http di go.
+/*
+NewServeMux, restituisce un nuovo miltiplixier personalizzato.
+*/
 func NewServeMux() *ServeMux {
     mux := new(ServeMux)
     mux.m = make(map[string]Handler, 0)
+    mux.mVars = make(map[string]map[int]string, 0)
 
     return mux
 }
 
-// Handler è la ridefenizione del Handler del modulo http di go.
-// usato per provare a mantenere la logica del quel modulo.
+/*
+Handler, è un interfaccia che come funzionalità e struttura non è diversa dal
+handler originale del modulo http di go.
+TODO: Probabilmente è più corretto usare il http.Handler, resta da verificare.
+*/
 type Handler interface {
     ServeHTTP(http.ResponseWriter, *http.Request)
 }
@@ -129,7 +173,14 @@ func (mux *ServeMux) ServeHTTP(out http.ResponseWriter, in *http.Request) {
             mux.lock.Unlock()
         }()
 
-        handle := mux.match(in)
+        handle, pattern := mux.match(in)
+        if len(pattern) > 0 {
+            in.ParseMultipartForm(0)
+            urlValues := strings.Split(in.URL.Path, "/")
+            for k, v := range(mux.mVars[pattern]) {
+                in.Form[v] = []string{urlValues[k]}
+            }
+        }
         handle.ServeHTTP(out, in)
     }
 }

@@ -1,7 +1,7 @@
 package addon
 
-// GetAll restituisce la lista dei addon avibili in mapo
+// GetAll restituisce la lista dei addon disponibili
 func GetAll() []string {
-    // crea una lista di tutt i addon
+    // crea una lista di tutti i addon
     return nil
 }

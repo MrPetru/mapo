@@ -41,8 +41,9 @@ func (u *user) GetId() string {
     return u.Id
 }
 
-func (u *user) Restore(filter bson.M) error {
-    err := database.RestoreOne(u, filter, "users")
+func (u *user) Restore() error {
+    id := u.Id
+    err := database.RestoreOne(u, bson.M{"_id":id}, "users")
     return err
 }
 

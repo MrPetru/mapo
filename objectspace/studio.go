@@ -76,10 +76,10 @@ func (s *studio) Save() error {
 }
 
 // Restore interoga il database per le informazioni di un certo studio
-func (s *studio) Restore(filter bson.M) error {
+func (s *studio) Restore() error {
     log.Debug("restoring user from database")
 
-    err := database.RestoreOne(s, filter, "studios")
+    err := database.RestoreOne(s, bson.M{"_id":s.Id}, "studios")
 
     return err
 }

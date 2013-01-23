@@ -7,27 +7,6 @@ import (
     "gconf/conf"
 )
 
-// ExtractSingleValue è una funzione che aiuta a prendere un singolo valore
-// dalla mappa di valori della forma (in.Form per esempio).
-// TODO: verificare l'utilizo della funzione in,FormValue("id") se è adata
-// al utilizo in/a posto di questa funzione
-func ExtractSingleValue(data map[string][]string, name string) string {
-    v, ok := data[name]
-    if !ok {
-        return ""
-    }
-
-    if len(v) < 1 {
-        return ""
-    }
-
-    if len(v) > 1 {
-        return ""
-    }
-
-    return v[0]
-}
-
 // statusResult aiuta a formattare i dati inviati verso il cliente
 type statusResult struct {
     Status string `json:"status"`
@@ -74,7 +53,15 @@ func (ce *coreErr) append(key string, err interface{}) {
     }
 }
 
+/*
+GlobalConfiguration, il oggetto globale per l'accesso ai dati contenuti nel
+file di configurazione.
+*/
 var GlobalConfiguration *conf.ConfigFile
+
+/*
+ReadConfiguration, attiva il GlobalConfiguration.
+*/
 func ReadConfiguration(filepath string) error {
 
     c, err := conf.ReadConfigFile(filepath)

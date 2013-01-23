@@ -5,9 +5,6 @@ import (
     "mapo/objectspace"
 
     "net/http"
-    "strings"
-
-    "labix.org/v2/mgo/bson"
 )
 
 // GetUser restituisce un utente che è gia salvato nella database
@@ -16,8 +13,6 @@ func GetUser(out http.ResponseWriter, in *http.Request) {
 
     log.Msg("executing GetUser function")
 
-    in.ParseForm()
-
     errors := NewCoreErr()
 
     // cearmo un nuovo ogetto/contenitore per il utente richiesto
@@ -25,7 +20,7 @@ func GetUser(out http.ResponseWriter, in *http.Request) {
 
     // aggiorniamo il valore del id del utente, che servirà per ricavare l'utente
     // dal database
-    id := strings.Split(in.URL.Path[1:], "/")[2]
+    id := in.FormValue("uid")
     err := user.SetId(id)
     if err != nil {
         errors.append("id", err)
@@ -37,10 +32,8 @@ func GetUser(out http.ResponseWriter, in *http.Request) {
         return
     }
 
-    filter := bson.M{"_id":id}
-
     // ricavare i dati del utente dalla database
-    err = user.Restore(filter)
+    err = user.Restore()
     if err != nil {
         errors.append("on restore", err)
         WriteJsonResult(out, errors, "error")

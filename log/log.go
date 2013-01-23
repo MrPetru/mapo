@@ -34,8 +34,10 @@ const (
 	DEBUG
 )
 
-type logger struct {
-	level int
+func init() {
+
+    // create a global logger object
+    l.level = debug
 }
 
 var l logger
