@@ -153,7 +153,7 @@ mw.userProfile = function(parent, data) {
     mw.label(w, data["Oauthprovider"], "value")
 
     mw.label(w, "OAUTH ID:", "label");
-    mw.label(w, data["id"], "value")
+    mw.label(w, data["Oauthid"], "value")
 
     mw.label(w, "AVATAR:", "label");
     mw.image(w, data["picture"], 128, 128)

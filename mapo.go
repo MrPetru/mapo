@@ -133,7 +133,7 @@ func main() {
 
     muxer.HandleFunc("GET", "/", webui.Root)
 
-    //muxer.HandleFunc("POST", "/login", core.Login)
+    muxer.HandleFunc("GET", "/login/{oauthprovider}", core.Login)
     //muxer.HandleFunc("GET", "/logout", core.Logout)
 
     jsHandler := http.StripPrefix("/js/", http.FileServer(http.Dir("/home/develop/go/src/mapo/webui/static/js")))

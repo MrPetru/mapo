@@ -12,7 +12,7 @@ type user struct {
     Id string `bson:"_id"`
     Name string
     Email string
-    Oauthid string `json:"id"`
+    Oauthid string
     Oauthprovider string
     Avatar string `json:"picture"`
 
