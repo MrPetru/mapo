@@ -38,14 +38,17 @@ import (
 // registrazione come server in ascolto su la rete.
 func main() {
 
-    var confFilePath = flag.String("conf", "./conf.ini", "path to configuration file")
-    var logLevel = flag.String("log", "DEBUG", "output log level INFO, ERROR, DEBUG")
+	log.Info("Starting application")
 
+	// parse flags
+    var confFilePath = flag.String("conf", "./conf.ini", "path to configuration file")
+    var logLevel = flag.String("log", "DEBUG", "log level eg: INFO, ERROR, DEBUG")
     flag.Parse()
 
     // livello generale del log, quantita dei messaggi da stampare
     log.SetLevel(*logLevel)
 
+	// load config file
     err := admin.ReadConfiguration(*confFilePath)
     if err != nil {
         log.Info("no valid configuration, details: %v", err)
@@ -74,12 +77,12 @@ func main() {
     database che poi viene riutilizzata, diminuisce considerevolmente i tempi di
     interrogazione.
     */
+	log.Info("Initializing db")
     err = db.NewConnection("mapo")
     if err != nil {
         log.Info("error connecting to database (%v)", err)
         return
     }
-    log.Info("created a new database connection")
 
     /*
     anche qui il discorso è molto simile a quello della connessione alla
@@ -87,6 +90,7 @@ func main() {
     Passare l'oggetto addons nella catena per arrivare al punto di destinazione
     potrebbe creare dei disagi.
     */
+	log.Info("Loading addons")
     addonList := addons.GetAll()
     addonList = addonList
     log.Info("load addons and generate a list")
@@ -105,14 +109,15 @@ func main() {
         Handler: muxer,
     }
 
-    // TODO: register this node to load-balancing service
-
     c := make(chan os.Signal, 1)
     signal.Notify(c, syscall.SIGINT)
 
     // aviamo in una nuova gorutine la funzione che ascolterà per il segnale di
     // spegnimento del server
     go muxer.getSignalAndClose(c)
+
+	// register handlers
+	log.Info("Registering handlers")
 
     muxer.HandleFunc("GET", "/admin/user/{uid}", admin.Authenticate(admin.GetUser))
 
@@ -147,7 +152,26 @@ func main() {
     // sul server del servizio aviene con successo o meno.
     muxer.HandleFunc("GET", "/oauth2callback", admin.OAuthCallBack)
 
-    log.Info("start listening for requests")
+	// register with supervisor
+	log.Info("Joining supervisor")
+	// TODO: register this node to load-balancing service
+
+    log.Info("Listening for requests")
+
+		// for each request
+			// check authentication/authorization
+
+			// extract request operation
+
+			// extract request arguments
+
+			// pass operation and arguments to api.router
+
+				// find function mapped to operation
+
+				// call function with arguments
+
+			// return result to user
 
     // avviamo il server che processerà le richieste
     log.Info("close server with message: %v", server.ListenAndServe())
