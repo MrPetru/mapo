@@ -74,6 +74,56 @@ func GetStudio(out http.ResponseWriter, in *http.Request) {
     WriteJsonResult(out, studio[0], "ok")
 }
 
+/*
+UpdateStudio riceve i dati dal cliente e aggiorna quelli che sono già nella
+database.
+
+le situazioni:
+    a. update
+        assolutamente tutti i valori sono inviati dal cliente, che quelli non
+        modificati.
+    b. patch
+        vengono inviati soltanto i valori che sono stati modificati. i campi
+        non ricevuti dovranno essere ignorati. Ecco il link a il draft del
+        path+json http://tools.ietf.org/html/draft-ietf-appsawg-json-patch-10
+    NOTA: in entrambe le situazioni, per cancellare un valore si deve inviare
+    un dato nullo per quella chiave.
+*/
+func UpdateStudio(out http.ResponseWriter, in *http.Request) {
+    // patch o normal_update?
+
+    // proviamo a implementare questa funzione come patch: i campi non ricevuti
+    // verranno ignorati.
+
+    sid := in.FormValue("sid")
+    studio := objectspace.NewStudio()
+    studio.SetId(sid)
+    err := studio.Restore()
+    if err != nil {
+        return
+    }
+
+    //description
+    if _, ok := in.Form["description"]; ok {
+        studio.SetDescription(in.FormValue("description"))
+    }
+
+    //name
+    if _, ok := in.Form["name"]; ok {
+        studio.SetName(in.FormValue("name"))
+    }
+
+    //owners
+    if _, ok := in.Form["owner"]; ok {
+        studio.AppendOwner(in.FormValue("owner"))
+        // dobbiamo anche cancellare dei owners dalla lista?
+    }
+
+    studio.Update()
+
+    WriteJsonResult(out, studio, "ok")
+}
+
 // GetStudioAll restituisce al cliente le informazioni di piu' progetti in una
 // lista
 func GetStudioAll(out http.ResponseWriter, in *http.Request) {

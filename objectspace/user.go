@@ -5,6 +5,7 @@ import (
     "mapo/database"
 
     "errors"
+    "time"
     "labix.org/v2/mgo/bson"
 )
 
@@ -16,6 +17,7 @@ type user struct {
     Oauthprovider string
     Avatar string `json:"picture"`
 
+    Registered time.Time `json:"-"`
     AccessToken string `json:"-"`
 }
 

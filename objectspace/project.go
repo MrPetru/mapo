@@ -5,6 +5,7 @@ import (
     "mapo/database"
 
     "errors"
+    "time"
     "labix.org/v2/mgo/bson"
 )
 
@@ -17,6 +18,7 @@ type project struct {
     Supervisors []string
     Artists []string
 
+    Created time.Time
     Addons []string `json:"-"`
 }
 
