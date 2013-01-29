@@ -2,7 +2,7 @@ package objectspace
 
 import (
     "mapo/log"
-    "mapo/database"
+    "mapo/db"
 
     "errors"
     "time"
@@ -63,14 +63,14 @@ func (p *project) SetStudioId(value string) error {
 
 func (p *project) Save() error {
     log.Debug("save project to database")
-    err := database.Store(p, "projects")
+    err := db.Store(p, "projects")
     return err
 }
 
 func ProjectRestorList(filter bson.M) ([]project, error) {
     p := make([]project, 0)
 
-    err := database.RestoreList(&p, filter, "projects")
+    err := db.RestoreList(&p, filter, "projects")
 
     if err != nil {
         return nil, err
@@ -81,7 +81,7 @@ func ProjectRestorList(filter bson.M) ([]project, error) {
 
 func (p *project) Restore() error {
 
-    err := database.RestoreOne(&p, bson.M{"_id":p.Id}, "projects")
+    err := db.RestoreOne(&p, bson.M{"_id":p.Id}, "projects")
 
     if err != nil {
         return err
