@@ -123,6 +123,7 @@ func main() {
     muxer.HandleFunc("POST", "/admin/studio", core.Authenticate(core.NewStudio))
     muxer.HandleFunc("GET", "/admin/studio", core.Authenticate(core.GetStudioAll))
     muxer.HandleFunc("GET", "/admin/studio/{sid}", core.Authenticate(core.GetStudio))
+    muxer.HandleFunc("GET", "/admin/studio/{sid}/update", core.Authenticate(core.UpdateStudio))
 
     muxer.HandleFunc("POST", "/admin/project", core.Authenticate(core.NewProject))
     muxer.HandleFunc("GET", "/admin/project", core.Authenticate(core.GetProjectAll))

@@ -5,6 +5,7 @@ import (
     "mapo/log"
 
     "errors"
+    "time"
     "labix.org/v2/mgo/bson"
 )
 
@@ -14,6 +15,8 @@ type studio struct {
     Description string
     Owners []string
     Projects []string
+
+    Created time.Time
 }
 
 func NewStudio() studio {

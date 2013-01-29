@@ -9,6 +9,7 @@ import (
     "fmt"
     "encoding/json"
     "io/ioutil"
+    "time"
 )
 
 /*
@@ -178,6 +179,11 @@ func OAuthCallBack(out http.ResponseWriter, in *http.Request) {
         "birthday": "0000-00-00",
         "locale": "en"
     }
+
+    la trasformazione da questo test a una struttura user può essere effettuata
+    anche senza il modulo json (json - lo trovato come una soluzione veloce).
+    il procedimento senza il json potrebbe implicare le manipulazioni di
+    stringe e uso del modulo reflect come nel esempio http://ideone.com/XWtlo
     */
     responseGetBody, err := ioutil.ReadAll(responseGet.Body)
     userData := map[string]interface{}{}
@@ -192,6 +198,7 @@ func OAuthCallBack(out http.ResponseWriter, in *http.Request) {
     user.Avatar = userData["picture"].(string)
     user.AccessToken = accessData["access_token"].(string)
     user.Oauthprovider = "google.com"
+    user.Registered = time.Now()
     user.CreateId()
 
     // verifica se il utente esiste nella database
