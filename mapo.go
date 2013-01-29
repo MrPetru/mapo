@@ -4,10 +4,10 @@ DESCRIZIONE DI MAPO
 package main
 
 import (
-    "mapo/database"
-    "mapo/addon"
+    "mapo/db"
+    "mapo/addons"
     "mapo/log"
-    "mapo/core"
+    "mapo/admin"
     "mapo/webui"
     "mapo/api"
 
@@ -30,7 +30,7 @@ func main() {
     // livello generale del log, quantita dei messaggi da stampare
     log.SetLevel(*logLevel)
 
-    err := core.ReadConfiguration(*confFilePath)
+    err := admin.ReadConfiguration(*confFilePath)
     if err != nil {
         log.Info("no valid configuration, details: %v", err)
         return
@@ -38,7 +38,7 @@ func main() {
 
     /*
     in questa configurazione, connessione alla database viene attivata in un
-    oggetto definito globalmente al interno del modulo database.
+    oggetto definito globalmente al interno del modulo db.
     L'idea originale per Mapo è di creare un oggetto che contenga la
     connessione attiva e passare questo aggetto a tutte le funzione che ne
     hanno bisogno di fare una richiesta alla database.
@@ -47,8 +47,8 @@ func main() {
     significare, creare una catena dalla prima funzione all'ultima. Che
     avvolte non fa niente altro che aumentare il numero dei parametri passati
     da una funzione ad altra. Per esempio, la connessione al database si usa
-    nel modulo objectspace che viene chiamato dal modulo core che al suo tempo
-    viene chiamato da main. Inutile passare questo oggetto al modulo core,
+    nel modulo objectspace che viene chiamato dal modulo admin che al suo tempo
+    viene chiamato da main. Inutile passare questo oggetto al modulo admin,
     visto che li lui non serve.
 
     NOTA: accesso ai oggetti globali deve essere in qualche modo sincronizzato
@@ -58,16 +58,12 @@ func main() {
     database che poi viene riutilizzata, diminuisce considerevolmente i tempi di
     interrogazione.
     */
-    err = database.NewConnection("mapo")
+    err = db.NewConnection("mapo")
     if err != nil {
         log.Info("error connecting to database (%v)", err)
         return
     }
     log.Msg("created a new database connection")
-
-    // al avvio del'applicazione si verifica la disponibilità dei addon
-    // e si crea una lista globale che sarà passata verso altri moduli
-    // TODO: modulo addon ancora da implementare
 
     /*
     anche qui il discorso è molto simile a quello della connessione alla
@@ -75,8 +71,8 @@ func main() {
     Passare l'oggetto addons nella catena per arrivare al punto di destinazione
     potrebbe creare dei disagi.
     */
-    addons := addon.GetAll()
-    addons = addons
+    addonList := addons.GetAll()
+    addonList = addonList
     log.Msg("load addons and generate a list")
 
     // al momento del spegnimento dell'applicazione potremo trovarci con delle
@@ -102,24 +98,24 @@ func main() {
     // spegnimento del server
     go muxer.getSignalAndClose(c)
 
-    muxer.HandleFunc("GET", "/admin/user/{uid}", core.Authenticate(core.GetUser))
+    muxer.HandleFunc("GET", "/admin/user/{uid}", admin.Authenticate(admin.GetUser))
 
-    muxer.HandleFunc("POST", "/admin/studio", core.Authenticate(core.NewStudio))
-    muxer.HandleFunc("GET", "/admin/studio", core.Authenticate(core.GetStudioAll))
-    muxer.HandleFunc("GET", "/admin/studio/{sid}", core.Authenticate(core.GetStudio))
-    muxer.HandleFunc("GET", "/admin/studio/{sid}/update", core.Authenticate(core.UpdateStudio))
+    muxer.HandleFunc("POST", "/admin/studio", admin.Authenticate(admin.NewStudio))
+    muxer.HandleFunc("GET", "/admin/studio", admin.Authenticate(admin.GetStudioAll))
+    muxer.HandleFunc("GET", "/admin/studio/{sid}", admin.Authenticate(admin.GetStudio))
+    muxer.HandleFunc("GET", "/admin/studio/{sid}/update", admin.Authenticate(admin.UpdateStudio))
 
-    muxer.HandleFunc("POST", "/admin/project", core.Authenticate(core.NewProject))
-    muxer.HandleFunc("GET", "/admin/project", core.Authenticate(core.GetProjectAll))
-    muxer.HandleFunc("GET", "/admin/project/{pid}", core.Authenticate(core.GetProject))
+    muxer.HandleFunc("POST", "/admin/project", admin.Authenticate(admin.NewProject))
+    muxer.HandleFunc("GET", "/admin/project", admin.Authenticate(admin.GetProjectAll))
+    muxer.HandleFunc("GET", "/admin/project/{pid}", admin.Authenticate(admin.GetProject))
 
-    muxer.HandleFunc("GET", "/api/{pid}", core.Authenticate(core.GetProject))
-    muxer.HandleFunc("GET", "/api/{pid}/.*", core.Authenticate(api.HttpWrapper))
+    muxer.HandleFunc("GET", "/api/{pid}", admin.Authenticate(admin.GetProject))
+    muxer.HandleFunc("GET", "/api/{pid}/.*", admin.Authenticate(api.HttpWrapper))
 
     muxer.HandleFunc("GET", "/", webui.Root)
 
-    muxer.HandleFunc("GET", "/login/{oauthprovider}", core.Login)
-    //muxer.HandleFunc("GET", "/logout", core.Logout)
+    muxer.HandleFunc("GET", "/login/{oauthprovider}", admin.Login)
+    //muxer.HandleFunc("GET", "/logout", admin.Logout)
 
     jsHandler := http.StripPrefix("/js/", http.FileServer(http.Dir("/home/develop/go/src/mapo/webui/static/js")))
     muxer.Handle("GET", "/js/.*\\.js", jsHandler)
@@ -133,7 +129,7 @@ func main() {
     // OAuth
     // su questo url viene reinderizato il cliente dopo che la procedura di authenticazione
     // sul server del servizio aviene con successo o meno.
-    muxer.HandleFunc("GET", "/oauth2callback", core.OAuthCallBack)
+    muxer.HandleFunc("GET", "/oauth2callback", admin.OAuthCallBack)
 
     log.Info("start listening for requests")
 

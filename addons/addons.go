@@ -1,4 +1,4 @@
-package addon
+package addons
 
 // GetAll restituisce la lista dei addon disponibili
 func GetAll() []string {

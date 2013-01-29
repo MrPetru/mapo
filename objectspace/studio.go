@@ -1,7 +1,7 @@
 package objectspace
 
 import (
-    "mapo/database"
+    "mapo/db"
     "mapo/log"
 
     "errors"
@@ -74,7 +74,7 @@ func (s *studio) AppendProject(value string) error {
 
 func (s *studio) Save() error {
     log.Debug("save studio to database")
-    err := database.Store(s, "studios")
+    err := db.Store(s, "studios")
     return err
 }
 
@@ -82,7 +82,7 @@ func (s *studio) Save() error {
 func (s *studio) Restore() error {
     log.Debug("restoring user from database")
 
-    err := database.RestoreOne(s, bson.M{"_id":s.Id}, "studios")
+    err := db.RestoreOne(s, bson.M{"_id":s.Id}, "studios")
 
     return err
 }
@@ -90,13 +90,13 @@ func (s *studio) Restore() error {
 func StudioRestoreAll(filter bson.M) ([]studio, error) {
     studioList := make([]studio,0)
 
-    err := database.RestoreList(&studioList, filter, "studios")
+    err := db.RestoreList(&studioList, filter, "studios")
 
     return studioList, err
 }
 
 func (s *studio) Update() error {
     log.Debug("update studio to database")
-    err := database.Update(s, s.Id, "studios")
+    err := db.Update(s, s.Id, "studios")
     return err
 }

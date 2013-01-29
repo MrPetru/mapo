@@ -2,7 +2,7 @@ package api
 
 import (
     "mapo/log"
-    "mapo/core"
+    "mapo/admin"
     "mapo/objectspace"
 
     "net/http"
@@ -100,14 +100,14 @@ func HttpWrapper(out http.ResponseWriter, in *http.Request) {
         if c, err := in.Cookie("uid"); err == nil {
             v := c.Value
             if v != in.FormValue("currentuid") {
-                core.WriteJsonResult(out, "authentication don't match", "error")
+                admin.WriteJsonResult(out, "authentication don't match", "error")
                 return
             }
         }
         if c, err := in.Cookie("pid"); err != nil {
             v := c.Value
             if v != data.ProjectId {
-                core.WriteJsonResult(out, "project don't match", "error")
+                admin.WriteJsonResult(out, "project don't match", "error")
                 return
             }
         }
@@ -117,12 +117,12 @@ func HttpWrapper(out http.ResponseWriter, in *http.Request) {
 
     result, err := ApiRouter(data)
     if err != nil {
-        core.WriteJsonResult(out, err.Error(), "error")
+        admin.WriteJsonResult(out, err.Error(), "error")
         return
     }
 
     log.Debug("api data = %v", data)
     log.Debug("result = %v", result)
 
-    core.WriteJsonResult(out, result, "ok")
+    admin.WriteJsonResult(out, result, "ok")
 }
