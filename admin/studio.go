@@ -30,7 +30,7 @@ import (
 // NewStudio crea un nuovo studio
 func NewStudio(out http.ResponseWriter, in *http.Request) {
     // create new studio
-    log.Msg("executing NewStudio function")
+    log.Info("executing NewStudio function")
 
     errors := NewCoreErr()
 

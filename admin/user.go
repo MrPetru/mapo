@@ -30,7 +30,7 @@ import (
 // func GetUser(inValues values) interface{} {
 func GetUser(out http.ResponseWriter, in *http.Request) {
 
-    log.Msg("executing GetUser function")
+    log.Info("executing GetUser function")
 
     errors := NewCoreErr()
 

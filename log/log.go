@@ -34,17 +34,24 @@ const (
 	DEBUG
 )
 
-func init() {
-
-    // create a global logger object
-    l.level = debug
+type logger struct {
+    level int
 }
 
 var l logger
 
 // SetLevel sets the output level for the global logger
-func SetLevel(level int) {
-	l.level = level
+func SetLevel(level string) {
+    switch level {
+	case "ERROR":
+        l.level = 0
+    case "INFO":
+        l.level = 1
+    case "DEBUG":
+        l.level = 2
+    default:
+        l.level = 1
+    }
 }
 
 func print(level int, format string, v ...interface{}) {

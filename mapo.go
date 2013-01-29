@@ -39,7 +39,7 @@ import (
 func main() {
 
     var confFilePath = flag.String("conf", "./conf.ini", "path to configuration file")
-    var logLevel = flag.String("log", "DEBUG", "output log level NONE, INFO, MESSAGE, ERROR, DEBUG")
+    var logLevel = flag.String("log", "DEBUG", "output log level INFO, ERROR, DEBUG")
 
     flag.Parse()
 
@@ -79,7 +79,7 @@ func main() {
         log.Info("error connecting to database (%v)", err)
         return
     }
-    log.Msg("created a new database connection")
+    log.Info("created a new database connection")
 
     /*
     anche qui il discorso è molto simile a quello della connessione alla
@@ -89,7 +89,7 @@ func main() {
     */
     addonList := addons.GetAll()
     addonList = addonList
-    log.Msg("load addons and generate a list")
+    log.Info("load addons and generate a list")
 
     // al momento del spegnimento dell'applicazione potremo trovarci con delle
     // connessione attive dal parte del cliente. Il handler personalizzato usato
@@ -150,6 +150,6 @@ func main() {
     log.Info("start listening for requests")
 
     // avviamo il server che processerà le richieste
-    log.Msg("close server with message: %v", server.ListenAndServe())
+    log.Info("close server with message: %v", server.ListenAndServe())
 }
 
