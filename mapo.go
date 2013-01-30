@@ -24,6 +24,7 @@ import (
     "mapo/admin"
     "mapo/db"
     "mapo/addons"
+    "mapo/webui"
 
     "net/http"
     "os"
@@ -144,6 +145,17 @@ func main() {
     // su questo url viene reinderizato il cliente dopo che la procedura di authenticazione
     // sul server del servizio aviene con successo o meno.
     muxer.HandleFunc("GET", "/oauth2callback", admin.OAuthCallBack)
+
+    muxer.HandleFunc("GET", "/", webui.Root)
+
+    jsHandler := http.StripPrefix("/js/", http.FileServer(http.Dir("./webui/static/js")))
+    muxer.Handle("GET", "/js/.*\\.js", jsHandler)
+
+    cssHandler := http.StripPrefix("/css/", http.FileServer(http.Dir("./webui/static/css")))
+    muxer.Handle("GET", "/css/.*\\.css", cssHandler)
+
+    icoHandler := http.StripPrefix("/", http.FileServer(http.Dir("./webui/static/image")))
+    muxer.Handle("GET", "/favicon\\.ico", icoHandler)
 
     // register with supervisor
 	log.Info("Joining supervisor")

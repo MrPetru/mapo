@@ -21,3 +21,13 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 Package webui implements the UI framework used by addons.
 */
 package webui
+
+import (
+    "net/http"
+)
+
+// questa funzione restituisce il contenuto della pagina / (root)
+func Root(out http.ResponseWriter, in *http.Request) {
+
+    http.ServeFile(out, in, "./webui/static/root.html")
+}
