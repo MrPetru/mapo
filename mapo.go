@@ -23,6 +23,7 @@ import (
 	"mapo/log"
     "mapo/admin"
     "mapo/db"
+    "mapo/addons"
 
     "net/http"
     "os"
@@ -87,6 +88,15 @@ func main() {
 
 	// load addons
 	log.Info("Loading addons")
+    /*
+    anche qui il discorso è molto simile a quello della connessione alla
+    database.
+    Passare l'oggetto addons nella catena per arrivare al punto di destinazione
+    potrebbe creare dei disagi.
+    */
+    addonList := addons.GetAll()
+    addonList = addonList
+    log.Info("load addons and generate a list")
 
     // al momento del spegnimento dell'applicazione potremo trovarci con delle
     // connessione attive dal parte del cliente. Il handler personalizzato usato

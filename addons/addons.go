@@ -22,3 +22,9 @@ Package addons contains a framework to create Mapo addons and the addons
 shipped with the official distribution.
 */
 package addons
+
+// GetAll restituisce la lista dei addon disponibili
+func GetAll() []string {
+    // crea una lista di tutti i addon
+    return nil
+}
