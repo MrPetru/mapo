@@ -22,6 +22,7 @@ package main
 import (
 	"mapo/log"
     "mapo/admin"
+    "mapo/db"
 
     "net/http"
     "os"
@@ -55,6 +56,34 @@ func main() {
 
 	// init db
 	log.Info("Initializing db")
+    /*
+    in questa configurazione, connessione alla database viene attivata in un
+    oggetto definito globalmente al interno del modulo db.
+    L'idea originale per Mapo è di creare un oggetto che contenga la
+    connessione attiva e passare questo aggetto a tutte le funzione che ne
+    hanno bisogno di fare una richiesta alla database.
+
+    Passare l'oggetto database da una funzione ad altra, potrebbe
+    significare, creare una catena dalla prima funzione all'ultima. Che
+    avvolte non fa niente altro che aumentare il numero dei parametri passati
+    da una funzione ad altra. Per esempio, la connessione al database si usa
+    nel modulo objectspace che viene chiamato dal modulo admin che al suo tempo
+    viene chiamato da main. Inutile passare questo oggetto al modulo admin,
+    visto che li lui non serve.
+
+    NOTA: accesso ai oggetti globali deve essere in qualche modo sincronizzato
+    per evitare i problemi di inconsistenza.
+
+    NOTA: le osservazioni dimostrano che avendo una connessione attiva alla
+    database che poi viene riutilizzata, diminuisce considerevolmente i tempi di
+    interrogazione.
+    */
+    err = db.NewConnection("mapo")
+    if err != nil {
+        log.Error("%v", err)
+        return
+    }
+
 
 	// load addons
 	log.Info("Loading addons")

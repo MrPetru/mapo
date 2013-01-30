@@ -36,11 +36,10 @@ var database *mgo.Database
 // TODO: definire una funzione che si occupa con la creazione e gestione della
 // connessione verso un database.
 func NewConnection(databaseName string) error {
-    log.Debug("executing NewConnection function")
+    log.Info("executing NewConnection function")
 
     session, err := mgo.Dial("localhost")
     if err != nil {
-        log.Debug("error when connecting to database (%v)", err.Error())
         return err
     }
 
