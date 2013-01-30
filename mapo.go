@@ -25,6 +25,7 @@ import (
     "mapo/db"
     "mapo/addons"
     "mapo/webui"
+    "mapo/api"
 
     "net/http"
     "os"
@@ -136,7 +137,7 @@ func main() {
     muxer.HandleFunc("GET", "/admin/project/{pid}", admin.Authenticate(admin.GetProject))
 
     muxer.HandleFunc("GET", "/api/{pid}", admin.Authenticate(admin.GetProject))
-    //muxer.HandleFunc("GET", "/api/{pid}/.*", admin.Authenticate(api.HttpWrapper))
+    muxer.HandleFunc("GET", "/api/{pid}/.*", admin.Authenticate(api.HttpWrapper))
 
     muxer.HandleFunc("GET", "/login/{oauthprovider}", admin.Login)
     //muxer.HandleFunc("GET", "/logout", admin.Logout)
