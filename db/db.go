@@ -24,7 +24,7 @@ to store entities in a database.
 package db
 
 import (
-    "mapo/log"
+    "github.com/maponet/utils/log"
 
     "labix.org/v2/mgo"
     "labix.org/v2/mgo/bson"
