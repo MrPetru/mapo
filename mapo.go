@@ -20,40 +20,55 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
-	"mapo/log"
-    "mapo/admin"
-    "mapo/db"
     "mapo/addons"
+    "mapo/db"
+	"mapo/admin"
+	"github.com/maponet/utils/log"
+	"github.com/maponet/utils/conf"
 
-    "net/http"
-    "os"
-    "os/signal"
-    "syscall"
-    "flag"
+	"flag"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
 
-	log.Info("Starting application")
+	/*
+	parse flags
 
-	// parse flags
-    var logLevel = flag.Int("log", 1, "set message level eg: 0 = DEBUG, 1 = INFO, 2 = ERROR")
-    var confFilePath = flag.String("conf", "./conf.ini", "set path to configuration file")
-    flag.Parse()
-
-    // set log level
-	log.SetLevel(*logLevel)
-	log.Info("Setting log level to %d", *logLevel)
+	In some situation we will pass path to configuration file as a command line
+	value. This meaning that for first off all we need to define and parse all flags.
+	The only flag that we required on this step is only conf flag ... But we
+	can't distribute code with same functionality along file or files.
+	*/
+	var logLevel = log.FlagLevel("log")
+	var confFilePath = flag.String("conf", "./conf.ini", "set path to configuration file")
+	flag.Parse()
 
 	// load config and setup application
-	log.Info("Loading configuration from file")
-    err := admin.ReadConfiguration(*confFilePath)
-    if err != nil {
-        log.Info("%s, no such file or directory", *confFilePath)
-        return
-    }
+	err := conf.ParseConfigFile(*confFilePath)
+	if err != nil {
+		log.Error("%v", err)
+		return
+	}
+
+	// setup configuration value passed as command line arguments
+	if len(*logLevel) > 0 {
+		conf.GlobalConfiguration.AddOption("default", "loglevel", *logLevel)
+	}
 
 	// setup application
+
+	// set log level
+	value, _ := conf.GlobalConfiguration.GetString("default", "loglevel")
+	if err := log.SetLevelString(value); err != nil {
+		log.Error("%v", err)
+		return
+	}
+
+	log.Info("Starting application")
 
 	// init db
 	log.Info("Initializing db")
@@ -98,27 +113,27 @@ func main() {
     addonList = addonList
     log.Info("load addons and generate a list")
 
-    // al momento del spegnimento dell'applicazione potremo trovarci con delle
-    // connessione attive dal parte del cliente. Il handler personalizzato usato
-    // qui, ci permette di dire al server di spegnersi ma prima deve aspettare
-    // che tutte le richieste siano processate e la connessione chiusa.
-    //
-    // Oltre al spegnimento sicuro il ServeMux permette di registra dei nuovi
-    // handler usando come descrizione anche il metodo http tipo GET o POST.
-    muxer := NewServeMux()
+	// al momento del spegnimento dell'applicazione potremo trovarci con delle
+	// connessione attive dal parte del cliente. Il handler personalizzato usato
+	// qui, ci permette di dire al server di spegnersi ma prima deve aspettare
+	// che tutte le richieste siano processate e la connessione chiusa.
+	//
+	// Oltre al spegnimento sicuro il ServeMux permette di registra dei nuovi
+	// handler usando come descrizione anche il metodo http tipo GET o POST.
+	muxer := NewServeMux()
 
-    // prepare server
-    server := &http.Server {
-        Addr:   ":8081",
-        Handler: muxer,
-    }
+	// prepare server
+	server := &http.Server{
+		Addr:    ":8081",
+		Handler: muxer,
+	}
 
-    c := make(chan os.Signal, 1)
-    signal.Notify(c, syscall.SIGINT)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT)
 
-    // aviamo in una nuova gorutine la funzione che ascolterà per il segnale di
-    // spegnimento del server
-    go muxer.getSignalAndClose(c)
+	// aviamo in una nuova gorutine la funzione che ascolterà per il segnale di
+	// spegnimento del server
+	go muxer.getSignalAndClose(c)
 
 	// register handlers
 	log.Info("Registering handlers")
@@ -145,12 +160,12 @@ func main() {
     // sul server del servizio aviene con successo o meno.
     muxer.HandleFunc("GET", "/oauth2callback", admin.OAuthCallBack)
 
-    // register with supervisor
+	// register with supervisor
 	log.Info("Joining supervisor")
 
 	// start server
 	log.Info("Listening for requests")
-    log.Info("close server with message: %v", server.ListenAndServe())
+	log.Info("close server with message: %v", server.ListenAndServe())
 
 	// inform supervisor that we are up
 
@@ -168,7 +183,6 @@ func main() {
 			// call function with arguments
 
 		// return result to user
-
 
 	// close on signal
 	log.Info("Closing application")

@@ -21,7 +21,8 @@ package admin
 
 import (
     "mapo/objectspace"
-	"mapo/log"
+	"github.com/maponet/utils/log"
+	"github.com/maponet/utils/conf"
 
     "net/http"
     "net/url"
@@ -94,7 +95,7 @@ func Authenticate(handleFunc func(http.ResponseWriter, *http.Request)) func(http
         uid := uidCookie.Value
         authid := authidCookie.Value
 
-        cookie_secret, err := GlobalConfiguration.GetString("default", "cookiesecret")
+        cookie_secret, err := conf.GlobalConfiguration.GetString("default", "cookiesecret")
         if err != nil {
             log.Debug("error gettiong cookie secret value %v", err)
             Forbidden(out)
@@ -144,9 +145,9 @@ func OAuthCallBack(out http.ResponseWriter, in *http.Request) {
     var client_id, client_secret, cookie_secret string
 
     // interroghiamo il file di configurazione
-    client_id, err := GlobalConfiguration.GetString("googleoauth", "clientid")
-    client_secret, err = GlobalConfiguration.GetString("googleoauth", "clientsecret")
-    cookie_secret, err = GlobalConfiguration.GetString("default", "cookiesecret")
+    client_id, err := conf.GlobalConfiguration.GetString("googleoauth", "clientid")
+    client_secret, err = conf.GlobalConfiguration.GetString("googleoauth", "clientsecret")
+    cookie_secret, err = conf.GlobalConfiguration.GetString("default", "cookiesecret")
     if len(client_id) < 1 || len(client_secret) < 1 || len(cookie_secret) < 1 {
         log.Debug("invalid configuration for OAuth")
         return
