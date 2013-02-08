@@ -23,30 +23,10 @@ Package admin implements the API for Mapo's administration components.
 package admin
 
 import (
-    "gconf/conf"
     "encoding/json"
     "net/http"
     "fmt"
 )
-
-/*
-GlobalConfiguration, il oggetto globale per l'accesso ai dati contenuti nel
-file di configurazione.
-*/
-var GlobalConfiguration *conf.ConfigFile
-
-/*
-ReadConfiguration, attiva il GlobalConfiguration.
-*/
-func ReadConfiguration(filepath string) error {
-
-    c, err := conf.ReadConfigFile(filepath)
-    if err == nil {
-        GlobalConfiguration = c
-    }
-
-    return err
-}
 
 // statusResult aiuta a formattare i dati inviati verso il cliente
 type statusResult struct {
