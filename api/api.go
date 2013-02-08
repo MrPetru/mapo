@@ -23,7 +23,7 @@ Package api implements the API framework used by addons.
 package api
 
 import (
-    "mapo/log"
+    "github.com/maponet/utils/log"
     "mapo/admin"
     "mapo/objectspace"
 

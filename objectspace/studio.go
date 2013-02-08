@@ -21,7 +21,7 @@ package objectspace
 
 import (
     "mapo/db"
-    "mapo/log"
+    "github.com/maponet/utils/log"
 
     "errors"
     "time"

@@ -20,7 +20,7 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 package objectspace
 
 import (
-    "mapo/log"
+    "github.com/maponet/utils/log"
     "mapo/db"
 
     "errors"
