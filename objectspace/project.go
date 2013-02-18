@@ -38,7 +38,7 @@ type project struct {
     Artists []string
 
     Created time.Time
-    Addons []string `json:"-"`
+    Addons map[string][]string `json:"-"`
 }
 
 func NewProject() project {
@@ -46,6 +46,7 @@ func NewProject() project {
     p.Admins = make([]string, 0)
     p.Supervisors = make([]string, 0)
     p.Artists = make([]string, 0)
+	p.Addons = make(map[string][]string, 0)
 
     return *p
 }
@@ -86,6 +87,12 @@ func (p *project) Save() error {
     return err
 }
 
+func (p *project) Update() error {
+    log.Debug("update project to database")
+    err := db.Update(p, p.Id, "projects")
+    return err
+}
+
 func ProjectRestorList(filter bson.M) ([]project, error) {
     p := make([]project, 0)
 
@@ -109,8 +116,15 @@ func (p *project) Restore() error {
     return nil
 }
 
-// ritorna dal database la lista dei addon attivi per il progetto
-func (p *project) GetAddonList() []string {
+func (p *project) SetAddon(entity, addonId string) {
+	if p.Addons == nil {
+		p.Addons = make(map[string][]string)
+	}
+	p.Addons[entity] = []string{addonId}
+}
 
-    return p.Addons
+// ritorna dal database la lista dei addon attivi per il progetto
+func (p *project) GetAddonList(entity string) []string {
+
+    return p.Addons[entity]
 }

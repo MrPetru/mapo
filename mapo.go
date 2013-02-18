@@ -20,7 +20,7 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
-    "mapo/addons"
+    //"mapo/addons"
     "mapo/webui"
     "mapo/api"
     "mapo/db"
@@ -33,7 +33,9 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-)
+
+	"mapo/addons/repo/go/scene"
+	)
 
 func main() {
 
@@ -111,8 +113,9 @@ func main() {
     Passare l'oggetto addons nella catena per arrivare al punto di destinazione
     potrebbe creare dei disagi.
     */
-    addonList := addons.GetAll()
-    addonList = addonList
+	scene.Register()
+    //addonList := addons.GetAll()
+    //addonList = addonList
     log.Info("load addons and generate a list")
 
 	// al momento del spegnimento dell'applicazione potremo trovarci con delle
@@ -150,6 +153,7 @@ func main() {
     muxer.HandleFunc("POST", "/admin/project", admin.Authenticate(admin.NewProject))
     muxer.HandleFunc("GET", "/admin/project", admin.Authenticate(admin.GetProjectAll))
     muxer.HandleFunc("GET", "/admin/project/{pid}", admin.Authenticate(admin.GetProject))
+    muxer.HandleFunc("GET", "/admin/project/{pid}/appendaddon", admin.Authenticate(admin.AppendAddon))
 
     muxer.HandleFunc("GET", "/api/{pid}", admin.Authenticate(admin.GetProject))
     muxer.HandleFunc("GET", "/api/{pid}/.*", admin.Authenticate(api.HttpWrapper))

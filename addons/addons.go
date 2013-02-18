@@ -28,3 +28,36 @@ func GetAll() []string {
     // crea una lista di tutti i addon
     return nil
 }
+
+const (
+	String = 0
+)
+
+type Data interface {
+	GetValue(string) string
+}
+
+var Addons map[string]*addon = make(map[string]*addon)
+
+type addon struct {
+	id string
+	Constructors []func(*Entities)
+	dependByAddons interface{}
+}
+
+func NewAddon(id string) *addon {
+	ad := new(addon)
+	//ad.entity = entity
+	ad.id = id
+
+	if _, ok := Addons[id]; !ok {
+		Addons[id] = ad
+		return ad
+	}
+
+	return nil
+}
+
+func (a *addon) SetConstructor(c func(*Entities)) {
+	a.Constructors = append(a.Constructors, c)
+}

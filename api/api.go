@@ -30,6 +30,9 @@ import (
     "net/http"
     "strings"
     "labix.org/v2/mgo/bson"
+
+	//"mapo/addons/repo/go/scene"
+	"mapo/addons"
 )
 
 // apiData e' il contenitore dei dati che vengono inviati verso la funzione
@@ -37,13 +40,36 @@ import (
 type apiData struct {
     Method string
     ProjectId string
-    Resource string
+    ResourceType string // 
     ResourceId string
     ResourceFunction string
 
     StudioId string
     ExtraData map[string][]string
 }
+
+func (data *apiData) GetValue(name string) string {
+	if name == "id" {
+		return data.ResourceId
+	}
+
+	dataElement, ok := data.ExtraData[name]
+	if !ok {
+		panic("key not found in api data")
+	}
+	return dataElement[0]
+}
+
+type projectEntity struct {
+	Id string `bson:"_id"`
+	entityName string
+	addonsId []string
+}
+
+
+//func init() {
+//	scene.Register()
+//}
 
 // NewApiData crea un nuovo oggetto apiData
 func NewApiData() *apiData{
@@ -54,11 +80,11 @@ func NewApiData() *apiData{
 
 // ApiRouter identifica e esegue la funzione del addon che deve essere eseguita
 // per la risorsa richiesta.
-func ApiRouter(data *apiData) (*apiData, error) {
+func ApiRouter(data *apiData) (interface{}, error) {//(*apiData, error) {
 
     var err error
 
-    // crea la lista dei addon per il progetto corrente
+    // verifica se il progetto e lo studio sono collegati
     {
         studios, err := objectspace.StudioRestoreAll(bson.M{"_id":data.StudioId,"projects":data.ProjectId})
         if err != nil || len(studios) != 1 {
@@ -73,16 +99,82 @@ func ApiRouter(data *apiData) (*apiData, error) {
         return nil, err
     }
 
-    addons := project.GetAddonList()
-    addons = addons
+	// get entity type
+    addonsId := project.GetAddonList(data.ResourceType)
+	if len(addonsId) < 1 {
+		// run default action
+		// return result, err
+		log.Debug("addon non trovato\n")
+	}
 
-    // identifica la funzione da eseguire
+	// construct Entities
+	entitiesList := addons.NewEntitiesList()
+	for _, a := range(addonsId) {
+		constructors := addons.Addons[a].Constructors
+		for _, c := range(constructors) {
+			c(entitiesList)
+		}
+	}
+
+	log.Debug("entity list = %v\n", *entitiesList)
+	entity, ok := (*entitiesList)[data.ResourceType]
+	if !ok {
+		// run defalut action
+		// return result, err
+		log.Debug("identita non trovate\n")
+		return nil, nil
+	}
+
+	// creare il path della funzione da eseguire
+	//fPath := data.Method + ":/"
+	fPath := "/"
+
+	fPath = fPath + data.ResourceType
+	if fPath[len(fPath)-1] != '/' {
+		fPath = fPath + "/"
+	}
+
+	fPath = fPath + data.ResourceId
+	if fPath[len(fPath)-1] != '/' {
+		fPath = fPath + "/"
+	}
+
+	fPath = fPath + data.ResourceFunction
+	if fPath[len(fPath)-1] != '/' {
+		fPath = fPath + "/"
+	}
+
+	//function := entity.Function[fPath]
+
+	log.Info("resource=%v", fPath)
+
+    //// identifica la funzione da eseguire
+	//for _, value := range(addons) {
+	//	if value == fPath {
+	//		// run addon
+	//	}
+	//}
+
+	log.Debug("request data %v\n", data)
 
     // avvia la funzione
+	//fResult := function(entitiesList, data)
+	fResult := entity.RunByPath(data.Method, fPath, entitiesList, data)
+	if fResult != nil {
+		e, ok := fResult.(*addons.Entity)
+		if ok {
+			result := e.ToMap()
+			return result, nil
+		}
+		el, ok := fResult.(addons.EntityList)
+		if ok {
+			result := el.ToMap()
+			return result, nil
+		}
+	}
 
     // ritorna il risultato al cliente
-
-    return data, nil
+	return nil, nil
 }
 
 // e' la prima funzione chiamata da mapo che avvia il router delle api
@@ -107,7 +199,7 @@ func HttpWrapper(out http.ResponseWriter, in *http.Request) {
     data := NewApiData()
     data.Method = in.Method
     data.ProjectId = urlValues[2]
-    data.Resource = urlValues[3]
+    data.ResourceType = urlValues[3]
     data.ResourceId = urlValues[4]
     data.ResourceFunction = urlValues[5]
 
@@ -126,7 +218,7 @@ func HttpWrapper(out http.ResponseWriter, in *http.Request) {
                 return
             }
         }
-        if c, err := in.Cookie("pid"); err != nil {
+        if c, err := in.Cookie("pid"); err == nil {
             v := c.Value
             if v != data.ProjectId {
                 admin.WriteJsonResult(out, "project don't match", "error")

@@ -153,3 +153,50 @@ func GetProject(out http.ResponseWriter, in *http.Request) {
 
     WriteJsonResult(out, project, "ok")
 }
+
+func AppendAddon(out http.ResponseWriter, in *http.Request) {
+	errors := NewCoreErr()
+
+	id := in.FormValue("pid")
+    if len(id) == 0 {
+        errors.append("id", "no project id was provided")
+        WriteJsonResult(out, errors, "error")
+        return
+    }
+
+	addonId := in.FormValue("addonid")
+	entityName := in.FormValue("entityname")
+
+	project := objectspace.NewProject()
+	project.SetId(id)
+	err := project.Restore()
+	if err != nil {
+		errors.append("on restore", err)
+		WriteJsonResult(out, errors, "error")
+		return
+	}
+
+	if len(addonId) < 1 {
+		errors.append("addonid", "id del addon troppo corto")
+	}
+
+	if len(entityName) < 1 {
+		errors.append("entityname", "entityname troppo corto")
+	}
+
+	if len(errors) > 0 {
+		WriteJsonResult(out, errors, "error")
+		return
+	}
+
+	project.SetAddon(entityName, addonId)
+
+	err = project.Update()
+	if err != nil {
+		errors.append("un restore", err)
+		WriteJsonResult(out, errors, "error")
+		return
+	}
+
+	WriteJsonResult(out, project, "ok")
+}
