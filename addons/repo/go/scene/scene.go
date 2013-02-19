@@ -30,9 +30,9 @@ func Register() {
 	//addon.AddDependency = ""
 }
 
-func constructor(entities *addons.Entities) {
+func constructor(entityContainer *addons.EntityContainer) {
 	// creare le entità qui
-	scene := entities.New("scene")
+	scene := entityContainer.New("scene")
 	scene.AddAttribute("id", addons.String)
 	scene.AddAttribute("name", addons.String)
 	scene.AddAttribute("description", addons.String)
@@ -42,12 +42,12 @@ func constructor(entities *addons.Entities) {
 	scene.AddFunction("POST", "/scene", newScene)
 }
 
-func getOne(entities *addons.Entities, requestData addons.Data) interface{} {//*addons.Entity {
+func getOne(entityContainer *addons.EntityContainer, requestData addons.Data) interface{} {
 	project := requestData.GetValue("pid")
 	//user := requestData.GetValue("currentuid")
 	id := requestData.GetValue("id")
 
-	scene := entities.GetEntity("scene")
+	scene := entityContainer.GetEntity("scene")
 	scene.Restore(project, id)
 
 	log.Debug("done with get scene\n")
@@ -55,12 +55,12 @@ func getOne(entities *addons.Entities, requestData addons.Data) interface{} {//*
 	return &scene
 }
 
-func getAll(entities *addons.Entities, requestData addons.Data) interface{} {//[]addons.Entity {
+func getAll(entityContainer *addons.EntityContainer, requestData addons.Data) interface{} {
 	project := requestData.GetValue("pid")
 	//user := requestData.GetValue("currentuid")
 	//id := requestData.GetValue("id")
 
-	sceneList := entities.GetEntityList("scene")
+	sceneList := entityContainer.GetEntityList("scene")
 	sceneList.Restore(project)
 
 	log.Debug("done with get scene list\n")
@@ -69,14 +69,14 @@ func getAll(entities *addons.Entities, requestData addons.Data) interface{} {//[
 }
 
 
-func newScene(entities *addons.Entities, requestData addons.Data) interface{} {//*addons.Entity {
+func newScene(entityContainer *addons.EntityContainer, requestData addons.Data) interface{} {
 	project := requestData.GetValue("pid")
 	//user := requestData.GetValue("currentuid")
 
 	name := requestData.GetValue("name")
 	description := requestData.GetValue("description")
 
-	scene := entities.GetEntity("scene")
+	scene := entityContainer.GetEntity("scene")
 	scene.SetAttribute("name", name)
 	scene.SetAttribute("description", description)
 

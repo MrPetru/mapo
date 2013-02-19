@@ -31,7 +31,7 @@ import (
     "strings"
     "labix.org/v2/mgo/bson"
 
-	//"mapo/addons/repo/go/scene"
+	"mapo/addons/repo/go/scene"
 	"mapo/addons"
 )
 
@@ -67,9 +67,9 @@ type projectEntity struct {
 }
 
 
-//func init() {
-//	scene.Register()
-//}
+func init() {
+	scene.Register()
+}
 
 // NewApiData crea un nuovo oggetto apiData
 func NewApiData() *apiData{

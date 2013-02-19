@@ -34,7 +34,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"mapo/addons/repo/go/scene"
+	//"mapo/addons/repo/go/scene"
 	)
 
 func main() {
@@ -113,7 +113,7 @@ func main() {
     Passare l'oggetto addons nella catena per arrivare al punto di destinazione
     potrebbe creare dei disagi.
     */
-	scene.Register()
+	//scene.Register()
     //addonList := addons.GetAll()
     //addonList = addonList
     log.Info("load addons and generate a list")

@@ -26,14 +26,13 @@ import (
 
 	"regexp"
 	"strings"
-	"fmt"
 )
 
 type Entity struct {
 	name string
 	projectId string
 	//addonsId []string
-	Function map[string] func(*Entities, Data) interface{} //*Entity
+	Function map[string] func(*EntityContainer, Data) interface{}
 	attributes map[string]attribute
 }
 
@@ -58,18 +57,17 @@ func (e *Entity) SetAttribute(name, value string) {
 	}
 }
 
-func (e *Entity) AddFunction(method, path string, f func(*Entities, Data) interface{}) {//*Entity) {
+func (e *Entity) AddFunction(method, path string, f func(*EntityContainer, Data) interface{}) {
 	if e.Function == nil {
-		e.Function = make(map[string] func(*Entities, Data) interface{})//*Entity)
+		e.Function = make(map[string] func(*EntityContainer, Data) interface{})
 	}
 	pattern := createPattern(method, path)
 	e.Function[pattern] = f
 }
 
-func (e *Entity) RunByPath(method, path string, entities *Entities, data Data) interface{} {//*Entity {
-	var f func(*Entities, Data) interface{} //*Entity
+func (e *Entity) RunByPath(method, path string, entities *EntityContainer, data Data) interface{} {
+	var f func(*EntityContainer, Data) interface{}
 	for k, v := range(e.Function) {
-		fmt.Printf("pattern=%v, method=%v, path=%v\n", k, method, path)
 		matching, _ := regexp.MatchString(k, method + ":" + path)
         if matching {
             f = v
@@ -162,7 +160,7 @@ func (el *EntityList) Restore(pid string) error {
 			ent.attributes[ak] = *a
 		}
 		ent.name = el.name
-		//ent.Function = make(map[string] func(*Entities, Data) interface{})//*Entity)
+		//ent.Function = make(map[string] func(*EntityContainer, Data) interface{})
 
 		for k, v := range(entry) {
 			if k == "_id" {
@@ -195,29 +193,29 @@ func (el *EntityList) ToMap() []map[string]interface{} {
 	return list
 }
 
-type Entities map[string]*Entity
+type EntityContainer map[string]*Entity
 
-func NewEntitiesList() *Entities {
-	el := make(Entities, 0)
+func NewEntitiesList() *EntityContainer {
+	el := make(EntityContainer, 0)
 
 	return &el
 }
 
-func (es *Entities) New(name string) *Entity {
+func (es *EntityContainer) New(name string) *Entity {
 	e :=new(Entity)
 	e.name = name
-	e.Function = make(map[string] func(*Entities, Data) interface{})//*Entity)
+	e.Function = make(map[string] func(*EntityContainer, Data) interface{})
 	e.attributes = make(map[string]attribute)
 	(*es)[name] = e
 	return e
 }
 
-func (es *Entities) GetEntity(name string) Entity {
+func (es *EntityContainer) GetEntity(name string) Entity {
 	e := (*es)[name]
 	return *e
 }
 
-func (es *Entities) GetEntityList(name string) EntityList {
+func (es *EntityContainer) GetEntityList(name string) EntityList {
 	e := (*es)[name]
 	eList := new(EntityList)
 	eList.name = name
@@ -247,8 +245,4 @@ func createPattern(method, path string) string {
     }
     pattern = pattern + "$"
     return pattern
-}
-
-func copyE(ed Entity) Entity {
-	return ed
 }

@@ -33,18 +33,31 @@ const (
 	String = 0
 )
 
+/*
+dati inviati al addon sono caratterizzati di questa interfaccia.
+*/
 type Data interface {
 	GetValue(string) string
 }
 
+/*
+lista globale dei addon disponibili. Identificati da un id unico.
+*/
 var Addons map[string]*addon = make(map[string]*addon)
 
+/*
+definizione de un singolo addon
+*/
 type addon struct {
 	id string
-	Constructors []func(*Entities)
+	Constructors []func(*EntityContainer)
 	dependByAddons interface{}
 }
 
+/*
+usato al avvio quando i addon vengono registrati nella lista globale dei
+addons. Pero, viene chiamato dal addon stesso.
+*/
 func NewAddon(id string) *addon {
 	ad := new(addon)
 	//ad.entity = entity
@@ -58,6 +71,11 @@ func NewAddon(id string) *addon {
 	return nil
 }
 
-func (a *addon) SetConstructor(c func(*Entities)) {
+/*
+ogni addon ha una funzione che costruisce le entità necessari ad un
+funzionamento corretto. Al momento della registrazione del addon,
+SetConstructor collega il costruttore al  addon.
+*/
+func (a *addon) SetConstructor(c func(*EntityContainer)) {
 	a.Constructors = append(a.Constructors, c)
 }
