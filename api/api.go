@@ -32,7 +32,7 @@ import (
     "labix.org/v2/mgo/bson"
 
 	"mapo/addons/repo/go/scene"
-	"mapo/addons"
+	//"mapo/addons"
 )
 
 // apiData e' il contenitore dei dati che vengono inviati verso la funzione
@@ -40,7 +40,7 @@ import (
 type apiData struct {
     Method string
     ProjectId string
-    ResourceType string // 
+    ResourceType string
     ResourceId string
     ResourceFunction string
 
@@ -67,9 +67,9 @@ type projectEntity struct {
 }
 
 
-func init() {
-	scene.Register()
-}
+//func init() {
+//	scene.Register()
+//}
 
 // NewApiData crea un nuovo oggetto apiData
 func NewApiData() *apiData{
@@ -108,9 +108,9 @@ func ApiRouter(data *apiData) (interface{}, error) {//(*apiData, error) {
 	}
 
 	// construct Entities
-	entitiesList := addons.NewEntitiesList()
+	entitiesList := NewEntitiesList()
 	for _, a := range(addonsId) {
-		constructors := addons.Addons[a].Constructors
+		constructors := Addons[a].Constructors
 		for _, c := range(constructors) {
 			c(entitiesList)
 		}
@@ -161,12 +161,12 @@ func ApiRouter(data *apiData) (interface{}, error) {//(*apiData, error) {
 	//fResult := function(entitiesList, data)
 	fResult := entity.RunByPath(data.Method, fPath, entitiesList, data)
 	if fResult != nil {
-		e, ok := fResult.(*addons.Entity)
+		e, ok := fResult.(*Entity)
 		if ok {
 			result := e.ToMap()
 			return result, nil
 		}
-		el, ok := fResult.(addons.EntityList)
+		el, ok := fResult.(EntityList)
 		if ok {
 			result := el.ToMap()
 			return result, nil

@@ -24,25 +24,25 @@ import (
 	"github.com/maponet/utils/log"
 )
 
-func Register() {
-	addon := addons.NewAddon("sc_base_v01")
+func Register(addonContainer addons.Addons) {
+	addon := addonContainer.NewAddon("sc_base_v01")
 	addon.SetConstructor(constructor)
 	//addon.AddDependency = ""
 }
 
-func constructor(entityContainer *addons.EntityContainer) {
+func constructor(entityContainer addons.EntityContainer) {
 	// creare le entità qui
-	scene := entityContainer.New("scene")
+	scene := entityContainer.NewEntity("scene")
 	scene.AddAttribute("id", addons.String)
 	scene.AddAttribute("name", addons.String)
 	scene.AddAttribute("description", addons.String)
 
-	scene.AddFunction("GET", "/scene/{id}", getOne)
-	scene.AddFunction("GET", "/scene", getAll)
-	scene.AddFunction("POST", "/scene", newScene)
+	scene.AddMethod("GET", "/scene/{id}", getOne)
+	scene.AddMethod("GET", "/scene", getAll)
+	scene.AddMethod("POST", "/scene", newScene)
 }
 
-func getOne(entityContainer *addons.EntityContainer, requestData addons.Data) interface{} {
+func getOne(entityContainer addons.EntityContainer, requestData addons.RequestData) interface{} {
 	project := requestData.GetValue("pid")
 	//user := requestData.GetValue("currentuid")
 	id := requestData.GetValue("id")
@@ -55,7 +55,7 @@ func getOne(entityContainer *addons.EntityContainer, requestData addons.Data) in
 	return &scene
 }
 
-func getAll(entityContainer *addons.EntityContainer, requestData addons.Data) interface{} {
+func getAll(entityContainer addons.EntityContainer, requestData addons.RequestData) interface{} {
 	project := requestData.GetValue("pid")
 	//user := requestData.GetValue("currentuid")
 	//id := requestData.GetValue("id")
@@ -69,7 +69,7 @@ func getAll(entityContainer *addons.EntityContainer, requestData addons.Data) in
 }
 
 
-func newScene(entityContainer *addons.EntityContainer, requestData addons.Data) interface{} {
+func newScene(entityContainer addons.EntityContainer, requestData addons.RequestData) interface{} {
 	project := requestData.GetValue("pid")
 	//user := requestData.GetValue("currentuid")
 
