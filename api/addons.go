@@ -23,6 +23,10 @@ shipped with the official distribution.
 */
 package api
 
+import (
+	"mapo/addons"
+)
+
 // GetAll restituisce la lista dei addon disponibili
 func GetAll() []string {
     // crea una lista di tutti i addon
@@ -40,17 +44,23 @@ type Data interface {
 	GetValue(string) string
 }
 
+type addonContainer map[string]*addon
+
 /*
 lista globale dei addon disponibili. Identificati da un id unico.
 */
-var Addons map[string]*addon = make(map[string]*addon)
+var Addons addonContainer
+
+func newAddonContainer() {
+	Addons = make(addonContainer)
+}
 
 /*
 definizione de un singolo addon
 */
 type addon struct {
 	id string
-	Constructors []func(*EntityContainer)
+	Constructors []func(addons.EntityContainer)
 	dependByAddons interface{}
 }
 
@@ -58,7 +68,7 @@ type addon struct {
 usato al avvio quando i addon vengono registrati nella lista globale dei
 addons. Pero, viene chiamato dal addon stesso.
 */
-func NewAddon(id string) *addon {
+func (ac *addonContainer) NewAddon(id string) addons.Addon {//*addon {
 	ad := new(addon)
 	//ad.entity = entity
 	ad.id = id
@@ -76,6 +86,6 @@ ogni addon ha una funzione che costruisce le entità necessari ad un
 funzionamento corretto. Al momento della registrazione del addon,
 SetConstructor collega il costruttore al  addon.
 */
-func (a *addon) SetConstructor(c func(*EntityContainer)) {
+func (a *addon) SetConstructor(c func(addons.EntityContainer)) {
 	a.Constructors = append(a.Constructors, c)
 }

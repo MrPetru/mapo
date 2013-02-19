@@ -67,9 +67,10 @@ type projectEntity struct {
 }
 
 
-//func init() {
-//	scene.Register()
-//}
+func init() {
+	newAddonContainer()
+	scene.Register(&Addons)
+}
 
 // NewApiData crea un nuovo oggetto apiData
 func NewApiData() *apiData{
@@ -88,6 +89,7 @@ func ApiRouter(data *apiData) (interface{}, error) {//(*apiData, error) {
     {
         studios, err := objectspace.StudioRestoreAll(bson.M{"_id":data.StudioId,"projects":data.ProjectId})
         if err != nil || len(studios) != 1 {
+			log.Error("api router studio restore")
             return nil, err
         }
     }
@@ -160,17 +162,19 @@ func ApiRouter(data *apiData) (interface{}, error) {//(*apiData, error) {
     // avvia la funzione
 	//fResult := function(entitiesList, data)
 	fResult := entity.RunByPath(data.Method, fPath, entitiesList, data)
+	log.Debug("fResult type=%T value=%v\n", fResult, fResult)
 	if fResult != nil {
 		e, ok := fResult.(*Entity)
 		if ok {
 			result := e.ToMap()
 			return result, nil
 		}
-		el, ok := fResult.(EntityList)
+		el, ok := fResult.(*EntityList)
 		if ok {
 			result := el.ToMap()
 			return result, nil
 		}
+		log.Debug("can't identify type of the result")
 	}
 
     // ritorna il risultato al cliente

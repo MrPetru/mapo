@@ -52,7 +52,7 @@ func getOne(entityContainer addons.EntityContainer, requestData addons.RequestDa
 
 	log.Debug("done with get scene\n")
 
-	return &scene
+	return scene
 }
 
 func getAll(entityContainer addons.EntityContainer, requestData addons.RequestData) interface{} {

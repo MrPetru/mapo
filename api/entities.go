@@ -26,13 +26,14 @@ import (
 
 	"regexp"
 	"strings"
+	"mapo/addons"
 )
 
 type Entity struct {
 	name string
 	projectId string
 	//addonsId []string
-	Function map[string] func(*EntityContainer, Data) interface{}
+	Function map[string] addons.Method//func(*EntityContainer, Data) interface{}
 	attributes map[string]attribute
 }
 
@@ -57,16 +58,17 @@ func (e *Entity) SetAttribute(name, value string) {
 	}
 }
 
-func (e *Entity) AddFunction(method, path string, f func(*EntityContainer, Data) interface{}) {
+func (e *Entity) AddMethod(method, path string, f addons.Method) {
+	//func(*EntityContainer, Data) interface{}) {
 	if e.Function == nil {
-		e.Function = make(map[string] func(*EntityContainer, Data) interface{})
+		e.Function = make(map[string] addons.Method)//func(*EntityContainer, Data) interface{})
 	}
 	pattern := createPattern(method, path)
 	e.Function[pattern] = f
 }
 
 func (e *Entity) RunByPath(method, path string, entities *EntityContainer, data Data) interface{} {
-	var f func(*EntityContainer, Data) interface{}
+	var f addons.Method//func(*EntityContainer, Data) interface{}
 	for k, v := range(e.Function) {
 		matching, _ := regexp.MatchString(k, method + ":" + path)
         if matching {
@@ -201,27 +203,27 @@ func NewEntitiesList() *EntityContainer {
 	return &el
 }
 
-func (es *EntityContainer) New(name string) *Entity {
+func (es *EntityContainer) NewEntity(name string) addons.Entity {
 	e :=new(Entity)
 	e.name = name
-	e.Function = make(map[string] func(*EntityContainer, Data) interface{})
+	e.Function = make(map[string] addons.Method)//func(*EntityContainer, Data) interface{})
 	e.attributes = make(map[string]attribute)
 	(*es)[name] = e
 	return e
 }
 
-func (es *EntityContainer) GetEntity(name string) Entity {
+func (es *EntityContainer) GetEntity(name string) addons.Entity {
 	e := (*es)[name]
-	return *e
+	return e
 }
 
-func (es *EntityContainer) GetEntityList(name string) EntityList {
+func (es *EntityContainer) GetEntityList(name string) addons.EntityList {
 	e := (*es)[name]
 	eList := new(EntityList)
 	eList.name = name
 	eList.baseEntity = e
 	eList.entities = make([]Entity, 0)
-	return *eList
+	return eList
 }
 
 func createPattern(method, path string) string {
