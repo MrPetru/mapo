@@ -43,12 +43,15 @@ func constructor(entityContainer addons.EntityContainer) {
 }
 
 func getOne(entityContainer addons.EntityContainer, requestData addons.RequestData) interface{} {
-	project := requestData.GetValue("pid")
+	//project := requestData.GetValue("pid")
 	//user := requestData.GetValue("currentuid")
 	id := requestData.GetValue("id")
 
 	scene := entityContainer.GetEntity("scene")
-	scene.Restore(project, id)
+	err := scene.Restore(id)
+	if err != nil {
+		return nil
+	}
 
 	log.Debug("done with get scene\n")
 
@@ -56,12 +59,15 @@ func getOne(entityContainer addons.EntityContainer, requestData addons.RequestDa
 }
 
 func getAll(entityContainer addons.EntityContainer, requestData addons.RequestData) interface{} {
-	project := requestData.GetValue("pid")
+	//project := requestData.GetValue("pid")
 	//user := requestData.GetValue("currentuid")
 	//id := requestData.GetValue("id")
 
 	sceneList := entityContainer.GetEntityList("scene")
-	sceneList.Restore(project)
+	err := sceneList.Restore()
+	if err != nil {
+		return nil
+	}
 
 	log.Debug("done with get scene list\n")
 
@@ -70,7 +76,7 @@ func getAll(entityContainer addons.EntityContainer, requestData addons.RequestDa
 
 
 func newScene(entityContainer addons.EntityContainer, requestData addons.RequestData) interface{} {
-	project := requestData.GetValue("pid")
+	//project := requestData.GetValue("pid")
 	//user := requestData.GetValue("currentuid")
 
 	name := requestData.GetValue("name")
@@ -80,7 +86,7 @@ func newScene(entityContainer addons.EntityContainer, requestData addons.Request
 	scene.SetAttribute("name", name)
 	scene.SetAttribute("description", description)
 
-	id, err := scene.Store(project)
+	id, err := scene.Store()
 	if err != nil {
 		panic(err)
 	}

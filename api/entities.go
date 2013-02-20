@@ -33,7 +33,7 @@ type Entity struct {
 	name string
 	projectId string
 	//addonsId []string
-	Function map[string] addons.Method//func(*EntityContainer, Data) interface{}
+	Function map[string] addons.Method
 	attributes map[string]attribute
 }
 
@@ -59,16 +59,15 @@ func (e *Entity) SetAttribute(name, value string) {
 }
 
 func (e *Entity) AddMethod(method, path string, f addons.Method) {
-	//func(*EntityContainer, Data) interface{}) {
 	if e.Function == nil {
-		e.Function = make(map[string] addons.Method)//func(*EntityContainer, Data) interface{})
+		e.Function = make(map[string] addons.Method)
 	}
 	pattern := createPattern(method, path)
 	e.Function[pattern] = f
 }
 
 func (e *Entity) RunByPath(method, path string, entities *EntityContainer, data Data) interface{} {
-	var f addons.Method//func(*EntityContainer, Data) interface{}
+	var f addons.Method
 	for k, v := range(e.Function) {
 		matching, _ := regexp.MatchString(k, method + ":" + path)
         if matching {
@@ -88,22 +87,30 @@ func (e *Entity) RunByPath(method, path string, entities *EntityContainer, data 
 
 func (e *Entity) ToMap() map[string]interface{} {
 	m := make(map[string]interface{},0)
+	isEmpty := true
 	for name, attr := range(e.attributes) {
 		m[name] = attr.value
+		if attr.value != "" {
+			isEmpty = false
+		}
 	}
 	log.Debug("entity as map %v\n", m)
 
+	if isEmpty {
+		return nil
+	}
 	return m
 }
 
-func (e *Entity) Restore(pid, id string) error {
-	collection := "foraddon_"+pid+"_"+e.name
+func (e *Entity) Restore(id string) error {
+	//collection := "foraddon_"+e.projectId+"_"+e.name
+	collection := "projectentities"
 	//m := e.ToMap()
 	m := make(map[string]interface{})
 	m["_id"] = ""
 	delete(m, "id")
 
-	filter := bson.M{"_id":bson.ObjectIdHex(id)}
+	filter := bson.M{"_id":bson.ObjectIdHex(id), "projectId":e.projectId}
 	err := db.RestoreOne(m, filter, collection)
 	if err != nil {
 		return err
@@ -122,12 +129,14 @@ func (e *Entity) Restore(pid, id string) error {
 	return nil
 }
 
-func (e *Entity) Store(pid string) (string, error) {
-	collection := "foraddon_"+pid+"_"+e.name
+func (e *Entity) Store() (string, error) {
+	//collection := "foraddon_"+pid+"_"+e.name
+	collection := "projectentities"
 	m := e.ToMap()
 	id := bson.NewObjectId()
 	//m["_id"] = md5sum()
 	m["_id"] = id
+	m["projectId"] = e.projectId
 	delete(m, "id")
 	err := db.Store(m, collection)
 	delete(m, "_id")
@@ -140,14 +149,17 @@ func (e *Entity) Store(pid string) (string, error) {
 
 type EntityList struct {
 	name string
+	projectId string
 	baseEntity *Entity
 	entities []Entity
 }
 
-func (el *EntityList) Restore(pid string) error {
-	collection := "foraddon_"+pid+"_"+el.name
+func (el *EntityList) Restore() error {
+	//collection := "foraddon_"+pid+"_"+el.name
+	collection := "projectentities"
 	ml := make([]map[string]interface{},0)
-	err := db.RestoreList(&ml, bson.M{}, collection)
+	filter := bson.M{"projectId":el.projectId}
+	err := db.RestoreList(&ml, filter, collection)
 	if err != nil {
 		return err
 	}
@@ -155,6 +167,7 @@ func (el *EntityList) Restore(pid string) error {
 
 	for _, entry := range(ml) {
 		delete(entry, "id")
+		delete(entry, "projectId")
 		ent := new(Entity)
 		ent.attributes = make(map[string]attribute, 0)
 		for ak, _ := range(el.baseEntity.attributes) {
@@ -162,7 +175,6 @@ func (el *EntityList) Restore(pid string) error {
 			ent.attributes[ak] = *a
 		}
 		ent.name = el.name
-		//ent.Function = make(map[string] func(*EntityContainer, Data) interface{})
 
 		for k, v := range(entry) {
 			if k == "_id" {
@@ -181,6 +193,9 @@ func (el *EntityList) Restore(pid string) error {
 }
 
 func (el *EntityList) ToMap() []map[string]interface{} {
+	if len(el.entities) < 1 {
+		return nil
+	}
 	list := make([]map[string]interface{},0)
 	for _, e := range(el.entities) {
 		m := make(map[string]interface{},0)
@@ -206,7 +221,7 @@ func NewEntitiesList() *EntityContainer {
 func (es *EntityContainer) NewEntity(name string) addons.Entity {
 	e :=new(Entity)
 	e.name = name
-	e.Function = make(map[string] addons.Method)//func(*EntityContainer, Data) interface{})
+	e.Function = make(map[string] addons.Method)
 	e.attributes = make(map[string]attribute)
 	(*es)[name] = e
 	return e
@@ -221,6 +236,7 @@ func (es *EntityContainer) GetEntityList(name string) addons.EntityList {
 	e := (*es)[name]
 	eList := new(EntityList)
 	eList.name = name
+	eList.projectId = e.projectId
 	eList.baseEntity = e
 	eList.entities = make([]Entity, 0)
 	return eList

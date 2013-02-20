@@ -126,6 +126,7 @@ func ApiRouter(data *apiData) (interface{}, error) {//(*apiData, error) {
 		log.Debug("identita non trovate\n")
 		return nil, nil
 	}
+	entity.projectId = data.ProjectId
 
 	// creare il path della funzione da eseguire
 	//fPath := data.Method + ":/"
@@ -204,6 +205,9 @@ func HttpWrapper(out http.ResponseWriter, in *http.Request) {
     data.Method = in.Method
     data.ProjectId = urlValues[2]
     data.ResourceType = urlValues[3]
+	if len(data.ResourceType) < 1 {
+		data.ResourceType = "project"
+	}
     data.ResourceId = urlValues[4]
     data.ResourceFunction = urlValues[5]
 

@@ -25,12 +25,12 @@ type Entity interface {
 	AddAttribute(string, int)
 	SetAttribute(string, string)
 	AddMethod(string, string, Method)
-	Restore(string, string) error
-	Store(string) (string, error)
+	Restore(string) error
+	Store() (string, error)
 }
 
 type EntityList interface {
-	Restore(string) error
+	Restore() error
 }
 
 type Method func(EntityContainer, RequestData) interface{}
