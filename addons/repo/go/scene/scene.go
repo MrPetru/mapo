@@ -21,7 +21,6 @@ package scene
 
 import (
 	"mapo/addons"
-	"github.com/maponet/utils/log"
 )
 
 func Register(addonContainer addons.Addons) {
@@ -36,61 +35,4 @@ func constructor(entityContainer addons.EntityContainer) {
 	scene.AddAttribute("id", addons.String)
 	scene.AddAttribute("name", addons.String)
 	scene.AddAttribute("description", addons.String)
-
-	scene.AddMethod("GET", "/scene/{id}", getOne)
-	scene.AddMethod("GET", "/scene", getAll)
-	scene.AddMethod("POST", "/scene", newScene)
-}
-
-func getOne(entityContainer addons.EntityContainer, requestData addons.RequestData) interface{} {
-	//project := requestData.GetValue("pid")
-	//user := requestData.GetValue("currentuid")
-	id := requestData.GetValue("id")
-
-	scene := entityContainer.GetEntity("scene")
-	err := scene.Restore(id)
-	if err != nil {
-		return nil
-	}
-
-	log.Debug("done with get scene\n")
-
-	return scene
-}
-
-func getAll(entityContainer addons.EntityContainer, requestData addons.RequestData) interface{} {
-	//project := requestData.GetValue("pid")
-	//user := requestData.GetValue("currentuid")
-	//id := requestData.GetValue("id")
-
-	sceneList := entityContainer.GetEntityList("scene")
-	err := sceneList.Restore()
-	if err != nil {
-		return nil
-	}
-
-	log.Debug("done with get scene list\n")
-
-	return sceneList
-}
-
-
-func newScene(entityContainer addons.EntityContainer, requestData addons.RequestData) interface{} {
-	//project := requestData.GetValue("pid")
-	//user := requestData.GetValue("currentuid")
-
-	name := requestData.GetValue("name")
-	description := requestData.GetValue("description")
-
-	scene := entityContainer.GetEntity("scene")
-	scene.SetAttribute("name", name)
-	scene.SetAttribute("description", description)
-
-	id, err := scene.Store()
-	if err != nil {
-		panic(err)
-	}
-	scene.SetAttribute("id", id)
-
-	return &scene
 }

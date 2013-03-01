@@ -20,6 +20,10 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 package api
 
 import (
+	"errors"
+)
+
+import (
 	"github.com/maponet/utils/log"
 	"mapo/db"
 	"labix.org/v2/mgo/bson"
@@ -27,7 +31,212 @@ import (
 	"regexp"
 	"strings"
 	"mapo/addons"
+	"reflect"
 )
+
+func newEntity(entity addons.CompEntity, data addons.RequestData) (addons.CompEntity, error) {
+	var err error
+
+	localEntity, ok := entity.(*Entity)
+	if !ok {
+		return nil, errors.New("not an entity")
+	}
+
+	for key, _ := range(localEntity.attributes) {
+		attrValue := data.GetValue(key)
+		if len(attrValue) > 0 {
+			entity.SetAttribute(key, attrValue)
+			// TODO: gestire le validazioni
+		}
+	}
+
+	err = entity.Store()
+	if err != nil {
+		return nil, err
+	}
+
+	return entity, nil
+}
+
+func getOne(entity addons.CompEntity, requestData addons.RequestData) (addons.CompEntity, error) {
+
+	id := requestData.GetValue("id")
+
+	err := entity.Restore(id)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debug("done with get entity\n")
+
+	return entity, nil
+}
+
+func getAll(entity addons.CompEntity, requestData addons.RequestData) (addons.CompEntity, error) {
+
+	err := entity.Restore("")
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debug("done with get entity list\n")
+
+	return entity, nil
+}
+
+// ===== end default functions ===== 
+
+type composedEntity struct {
+	isList bool
+	l []*Entity
+	s *Entity
+}
+
+func newCompEntity(entity interface{}) addons.CompEntity {
+	entityType := reflect.TypeOf(entity).String()
+
+	compE := new(composedEntity)
+
+	switch entityType {
+	case "*api.Entity":
+		compE.isList = false
+		e, _ := entity.(*Entity)
+		compE.s = e
+		compE.l = nil
+		log.Debug("is a single entity")
+		return compE
+	case "[]*api.Entity":
+		compE.isList = true
+		el, _ := entity.([]*Entity)
+		compE.l = el
+		compE.s = nil
+		return compE
+	}
+
+	return nil
+}
+
+func (compE *composedEntity) IsList() bool {
+	return compE.isList
+}
+
+func (compE *composedEntity) SetAttribute(name, value string) {
+	if compE.IsList() {
+		return
+	}
+
+	compE.s.SetAttribute(name, value)
+}
+
+func (compE *composedEntity) GetAttribute(name string) string {
+	if compE.IsList() {
+		panic ("cant get attribute from a list of elements")
+	}
+
+	return compE.s.GetAttribute(name)
+}
+
+func (compE *composedEntity) Store() error {
+	if compE.IsList() {
+		// store a list to database
+		return errors.New("can't store a list of entities")
+	}
+
+	// store a single element to database
+	return compE.s.Store()
+}
+
+func (compE *composedEntity) Restore(id string) error {
+
+	if len(id) > 0 {
+		err := compE.s.Restore(id)
+		compE.isList = false
+		return err
+	}
+
+	err := compE.restoreList()
+
+	return err
+}
+
+func (compE *composedEntity) restoreList() error {
+
+	collection := "projectentities"
+	ml := make([]map[string]interface{},0)
+	filter := bson.M{"projectId":compE.s.projectId}
+	err := db.RestoreList(&ml, filter, collection)
+	if err != nil {
+		return err
+	}
+	log.Debug("restored list of entities from database %v\n", ml)
+
+	for _, entry := range(ml) {
+		delete(entry, "projectId")
+		ent := new(Entity)
+		ent.attributes = make(map[string]attribute, 0)
+		for ak, _ := range(compE.s.attributes) {
+			a := new(attribute)
+			ent.attributes[ak] = *a
+		}
+		ent.name = compE.s.name
+
+		for k, v := range(entry) {
+			if k == "_id" {
+				id := v.(bson.ObjectId)
+				ent.SetAttribute("id", id.Hex())
+				continue
+			}
+			ent.SetAttribute(k, v.(string))
+		}
+		compE.l = append(compE.l, ent)
+	}
+
+	compE.isList = true
+
+	log.Debug("entity list = %v\n", compE.l)
+	return nil
+}
+
+func (compE *composedEntity) ToMap() interface{} {
+	if compE.IsList() {
+		// restore a list to database
+		log.Debug("need to process a list o entities")
+
+		if len(compE.l) < 1 {
+			return nil
+		}
+
+		list := make([]map[string]interface{},0)
+		for _, e := range(compE.l) {
+			m := make(map[string]interface{},0)
+			for name, attr := range(e.attributes) {
+				m[name] = attr.value
+			}
+			list = append(list, m)
+		}
+
+		log.Debug("entity list as map %v\n", list)
+		return list
+
+	} else {
+		// restore a single element to database
+		return compE.s.ToMap()
+	}
+
+	return nil
+}
+
+func (compE *composedEntity) List() []addons.CompEntity {
+	if compE.IsList() {
+		l := make([]addons.CompEntity, 0)
+		for _, E := range(compE.l) {
+			l = append(l, E)
+		}
+		return l
+	}
+
+	return []addons.CompEntity{compE.s}
+}
 
 type Entity struct {
 	name string
@@ -58,6 +267,15 @@ func (e *Entity) SetAttribute(name, value string) {
 	}
 }
 
+func (e *Entity) GetAttribute(name string) string {
+	attr, ok := e.attributes[name]
+	if ok {
+		return attr.value
+	}
+
+	return ""
+}
+
 func (e *Entity) AddMethod(method, path string, f addons.Method) {
 	if e.Function == nil {
 		e.Function = make(map[string] addons.Method)
@@ -66,46 +284,19 @@ func (e *Entity) AddMethod(method, path string, f addons.Method) {
 	e.Function[pattern] = f
 }
 
-func (e *Entity) RunByPath(method, path string, entities *EntityContainer, data Data) interface{} {
-	var f addons.Method
-	for k, v := range(e.Function) {
-		matching, _ := regexp.MatchString(k, method + ":" + path)
-        if matching {
-            f = v
-            break
-        }
-
-	}
-
-	if f != nil {
-		result := f(entities, data)
-		return result
-	}
-
-	return nil
-}
-
 func (e *Entity) ToMap() map[string]interface{} {
 	m := make(map[string]interface{},0)
-	isEmpty := true
 	for name, attr := range(e.attributes) {
 		m[name] = attr.value
-		if attr.value != "" {
-			isEmpty = false
-		}
 	}
 	log.Debug("entity as map %v\n", m)
 
-	if isEmpty {
-		return nil
-	}
 	return m
 }
 
 func (e *Entity) Restore(id string) error {
 	//collection := "foraddon_"+e.projectId+"_"+e.name
 	collection := "projectentities"
-	//m := e.ToMap()
 	m := make(map[string]interface{})
 	m["_id"] = ""
 	delete(m, "id")
@@ -129,12 +320,11 @@ func (e *Entity) Restore(id string) error {
 	return nil
 }
 
-func (e *Entity) Store() (string, error) {
+func (e *Entity) Store() error {
 	//collection := "foraddon_"+pid+"_"+e.name
 	collection := "projectentities"
 	m := e.ToMap()
 	id := bson.NewObjectId()
-	//m["_id"] = md5sum()
 	m["_id"] = id
 	m["projectId"] = e.projectId
 	delete(m, "id")
@@ -142,72 +332,10 @@ func (e *Entity) Store() (string, error) {
 	delete(m, "_id")
 
 	if err == nil {
-		return id.Hex(), nil
-	}
-	return "", err
-}
-
-type EntityList struct {
-	name string
-	projectId string
-	baseEntity *Entity
-	entities []Entity
-}
-
-func (el *EntityList) Restore() error {
-	//collection := "foraddon_"+pid+"_"+el.name
-	collection := "projectentities"
-	ml := make([]map[string]interface{},0)
-	filter := bson.M{"projectId":el.projectId}
-	err := db.RestoreList(&ml, filter, collection)
-	if err != nil {
-		return err
-	}
-	log.Debug("entities from database %v\n", ml)
-
-	for _, entry := range(ml) {
-		delete(entry, "id")
-		delete(entry, "projectId")
-		ent := new(Entity)
-		ent.attributes = make(map[string]attribute, 0)
-		for ak, _ := range(el.baseEntity.attributes) {
-			a := new(attribute)
-			ent.attributes[ak] = *a
-		}
-		ent.name = el.name
-
-		for k, v := range(entry) {
-			if k == "_id" {
-				id := v.(bson.ObjectId)
-				ent.SetAttribute("id", id.Hex())
-				continue
-			}
-			ent.SetAttribute(k, v.(string))
-		}
-		el.entities = append(el.entities, *ent)
-	}
-
-	log.Debug("entity list = %v\n", el)
-
-	return nil
-}
-
-func (el *EntityList) ToMap() []map[string]interface{} {
-	if len(el.entities) < 1 {
+		e.SetAttribute("id", id.Hex())
 		return nil
 	}
-	list := make([]map[string]interface{},0)
-	for _, e := range(el.entities) {
-		m := make(map[string]interface{},0)
-		for name, attr := range(e.attributes) {
-			m[name] = attr.value
-		}
-		list = append(list, m)
-	}
-
-	log.Debug("entity list as map %v\n", list)
-
-	return list
+	return err
 }
 
 type EntityContainer map[string]*Entity
@@ -218,12 +346,15 @@ func NewEntitiesList() *EntityContainer {
 	return &el
 }
 
-func (es *EntityContainer) NewEntity(name string) addons.Entity {
+func (es EntityContainer) NewEntity(name string) addons.Entity {
 	e :=new(Entity)
 	e.name = name
 	e.Function = make(map[string] addons.Method)
 	e.attributes = make(map[string]attribute)
-	(*es)[name] = e
+	e.AddMethod("GET", "/{id}", getOne)
+	e.AddMethod("GET", "/", getAll)
+	e.AddMethod("POST", "/", newEntity)
+	es[name] = e
 	return e
 }
 
@@ -232,14 +363,39 @@ func (es *EntityContainer) GetEntity(name string) addons.Entity {
 	return e
 }
 
-func (es *EntityContainer) GetEntityList(name string) addons.EntityList {
-	e := (*es)[name]
-	eList := new(EntityList)
-	eList.name = name
-	eList.projectId = e.projectId
-	eList.baseEntity = e
-	eList.entities = make([]Entity, 0)
-	return eList
+func (es EntityContainer) Run(entityName, method, path string, data Data) (addons.CompEntity, error) {
+	entity, ok := es[entityName]
+	if !ok {
+		return nil, errors.New("cant't find entity")
+	}
+
+	// find method to be run
+	// run method
+	var f addons.Method
+	for pattern, v := range(entity.Function) {
+		log.Debug("pattern is = %v", pattern)
+		matching, _ := regexp.MatchString(pattern, method + ":" + path)
+        if matching {
+			log.Debug("matching")
+            f = v
+            break
+        }
+		log.Debug("not matching")
+
+	}
+
+	if f == nil {
+		return nil, errors.New("entity don't handle this action")
+	}
+
+	compE := newCompEntity(entity)
+
+	resultEntity, err := f(compE, data)
+	if err == nil {
+		return resultEntity, nil
+	}
+
+	return nil, err
 }
 
 func createPattern(method, path string) string {

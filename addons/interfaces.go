@@ -1,3 +1,22 @@
+/*
+Copyright 2013 Petru Ciobanu, Francesco Paglia, Lorenzo Pierfederici
+
+This file is part of Mapo.
+
+Mapo is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 2 of the License, or
+(at your option) any later version.
+
+Mapo is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 package addons
 
 const (
@@ -9,16 +28,19 @@ type Addons interface {
 }
 
 type Addon interface {
-	//SetConstructor(constructor)
 	SetConstructor(func(EntityContainer))
 }
-
-//type constructor func(EntityContainer)
 
 type EntityContainer interface {
 	NewEntity(string) Entity
 	GetEntity(string) Entity
-	GetEntityList(string) EntityList
+}
+
+type CompEntity interface {
+	SetAttribute(string, string)
+	GetAttribute(string) string
+	Restore(string) error
+	Store() error
 }
 
 type Entity interface {
@@ -26,14 +48,14 @@ type Entity interface {
 	SetAttribute(string, string)
 	AddMethod(string, string, Method)
 	Restore(string) error
-	Store() (string, error)
+	Store() error
 }
 
 type EntityList interface {
 	Restore() error
 }
 
-type Method func(EntityContainer, RequestData) interface{}
+type Method func(CompEntity, RequestData) (CompEntity, error)
 
 type RequestData interface {
 	GetValue(string) string

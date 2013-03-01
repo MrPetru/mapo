@@ -29,10 +29,10 @@ import (
 
     "net/http"
     "strings"
+	"errors"
     "labix.org/v2/mgo/bson"
 
 	"mapo/addons/repo/go/scene"
-	//"mapo/addons"
 )
 
 // apiData e' il contenitore dei dati che vengono inviati verso la funzione
@@ -88,9 +88,12 @@ func ApiRouter(data *apiData) (interface{}, error) {//(*apiData, error) {
     // verifica se il progetto e lo studio sono collegati
     {
         studios, err := objectspace.StudioRestoreAll(bson.M{"_id":data.StudioId,"projects":data.ProjectId})
-        if err != nil || len(studios) != 1 {
-			log.Error("api router studio restore")
-            return nil, err
+        if err != nil {
+			return nil, err
+		}
+		if len(studios) != 1 {
+			log.Error("incorect query to database")
+            return nil, errors.New("cant't find asociated projects")
         }
     }
 
@@ -101,40 +104,16 @@ func ApiRouter(data *apiData) (interface{}, error) {//(*apiData, error) {
         return nil, err
     }
 
-	// get entity type
-    addonsId := project.GetAddonList(data.ResourceType)
-	if len(addonsId) < 1 {
-		// run default action
-		// return result, err
-		log.Debug("addon non trovato\n")
-	}
-
-	// construct Entities
-	entitiesList := NewEntitiesList()
-	for _, a := range(addonsId) {
-		constructors := Addons[a].Constructors
-		for _, c := range(constructors) {
-			c(entitiesList)
-		}
-	}
-
-	log.Debug("entity list = %v\n", *entitiesList)
-	entity, ok := (*entitiesList)[data.ResourceType]
-	if !ok {
-		// run defalut action
-		// return result, err
-		log.Debug("identita non trovate\n")
-		return nil, nil
-	}
-	entity.projectId = data.ProjectId
-
 	// creare il path della funzione da eseguire
-	//fPath := data.Method + ":/"
-	fPath := "/"
+	fPath := ""
 
 	fPath = fPath + data.ResourceType
-	if fPath[len(fPath)-1] != '/' {
-		fPath = fPath + "/"
+	if len(data.ResourceType) > 0 {
+		fPath = "/"
+	} else {
+		// operation not o entity
+		// run defalut project function
+		return nil, errors.New("project handler not found")
 	}
 
 	fPath = fPath + data.ResourceId
@@ -147,39 +126,34 @@ func ApiRouter(data *apiData) (interface{}, error) {//(*apiData, error) {
 		fPath = fPath + "/"
 	}
 
-	//function := entity.Function[fPath]
+	log.Debug("requested function is %v", fPath)
 
-	log.Info("resource=%v", fPath)
-
-    //// identifica la funzione da eseguire
-	//for _, value := range(addons) {
-	//	if value == fPath {
-	//		// run addon
-	//	}
-	//}
-
-	log.Debug("request data %v\n", data)
-
-    // avvia la funzione
-	//fResult := function(entitiesList, data)
-	fResult := entity.RunByPath(data.Method, fPath, entitiesList, data)
-	log.Debug("fResult type=%T value=%v\n", fResult, fResult)
-	if fResult != nil {
-		e, ok := fResult.(*Entity)
-		if ok {
-			result := e.ToMap()
-			return result, nil
-		}
-		el, ok := fResult.(*EntityList)
-		if ok {
-			result := el.ToMap()
-			return result, nil
-		}
-		log.Debug("can't identify type of the result")
+	// get entity type
+    addonsId := project.GetAddonList(data.ResourceType)
+	if len(addonsId) < 1 {
+		// run default action
+		// return result, err
+		return nil, errors.New("no active addons was found")
 	}
 
-    // ritorna il risultato al cliente
-	return nil, nil
+	// construct Entities
+	entitiesList := NewEntitiesList()
+	for _, a := range(addonsId) {
+		constructors := Addons[a].Constructors
+		for _, c := range(constructors) {
+			c(entitiesList)
+		}
+	}
+	for _, e := range(*entitiesList) {
+		e.projectId = data.ProjectId
+	}
+
+	resultCompEntity, err := entitiesList.Run(data.ResourceType, data.Method, fPath, data)
+	if err == nil {
+		compE, _ := resultCompEntity.(*composedEntity)
+		return compE.ToMap(), nil
+	}
+	return nil, err
 }
 
 // e' la prima funzione chiamata da mapo che avvia il router delle api
@@ -205,9 +179,6 @@ func HttpWrapper(out http.ResponseWriter, in *http.Request) {
     data.Method = in.Method
     data.ProjectId = urlValues[2]
     data.ResourceType = urlValues[3]
-	if len(data.ResourceType) < 1 {
-		data.ResourceType = "project"
-	}
     data.ResourceId = urlValues[4]
     data.ResourceFunction = urlValues[5]
 
@@ -243,6 +214,7 @@ func HttpWrapper(out http.ResponseWriter, in *http.Request) {
         return
     }
 
+    log.Debug("err = %v", err)
     log.Debug("api data = %v", data)
     log.Debug("result = %v", result)
 
