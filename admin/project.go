@@ -189,7 +189,7 @@ func AppendAddon(out http.ResponseWriter, in *http.Request) {
 		return
 	}
 
-	project.SetAddon(entityName, addonId)
+	project.AddAddon(entityName, addonId)
 
 	err = project.Update()
 	if err != nil {

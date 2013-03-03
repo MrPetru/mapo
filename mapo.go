@@ -20,7 +20,6 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
-    //"mapo/addons"
     "mapo/webui"
     "mapo/api"
     "mapo/db"
@@ -33,8 +32,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
-	//"mapo/addons/repo/go/scene"
 	)
 
 func main() {
@@ -107,15 +104,13 @@ func main() {
 
 	// load addons
 	log.Info("Loading addons")
+	api.RegisterAddons()
     /*
     anche qui il discorso è molto simile a quello della connessione alla
     database.
     Passare l'oggetto addons nella catena per arrivare al punto di destinazione
     potrebbe creare dei disagi.
     */
-	//scene.Register()
-    //addonList := addons.GetAll()
-    //addonList = addonList
     log.Info("load addons and generate a list")
 
 	// al momento del spegnimento dell'applicazione potremo trovarci con delle
@@ -157,6 +152,7 @@ func main() {
 
     //muxer.HandleFunc("GET", "/api/{pid}", admin.Authenticate(admin.GetProject))
     muxer.HandleFunc("GET", "/api/{pid}/.*", admin.Authenticate(api.HttpWrapper))
+    muxer.HandleFunc("POST", "/api/{pid}/.*", admin.Authenticate(api.HttpWrapper))
     muxer.HandleFunc("GET", "/api/{pid}", admin.Authenticate(api.HttpWrapper))
 
     muxer.HandleFunc("GET", "/login/{oauthprovider}", admin.Login)

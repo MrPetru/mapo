@@ -33,6 +33,8 @@ import (
     "labix.org/v2/mgo/bson"
 
 	"mapo/addons/repo/go/scene"
+	"mapo/addons/repo/go/shot"
+	"mapo/addons/repo/go/shotpatch"
 )
 
 // apiData e' il contenitore dei dati che vengono inviati verso la funzione
@@ -55,21 +57,17 @@ func (data *apiData) GetValue(name string) string {
 
 	dataElement, ok := data.ExtraData[name]
 	if !ok {
-		panic("key not found in api data")
+		//panic("key not found in api data")
+		return ""
 	}
 	return dataElement[0]
 }
 
-type projectEntity struct {
-	Id string `bson:"_id"`
-	entityName string
-	addonsId []string
-}
-
-
-func init() {
+func RegisterAddons() {
 	newAddonContainer()
 	scene.Register(&Addons)
+	shot.Register(&Addons)
+	shotpatch.Register(&Addons)
 }
 
 // NewApiData crea un nuovo oggetto apiData
@@ -138,7 +136,10 @@ func ApiRouter(data *apiData) (interface{}, error) {//(*apiData, error) {
 
 	// construct Entities
 	entitiesList := NewEntitiesList()
-	for _, a := range(addonsId) {
+
+	// create a ordered addons dependency list
+	orderedAddons := orderByDependency(addonsId, Addons)
+	for _, a := range(orderedAddons) {
 		constructors := Addons[a].Constructors
 		for _, c := range(constructors) {
 			c(entitiesList)

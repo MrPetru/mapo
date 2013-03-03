@@ -29,6 +29,7 @@ type Addons interface {
 
 type Addon interface {
 	SetConstructor(func(EntityContainer))
+	AddDependency(string)
 }
 
 type EntityContainer interface {
@@ -41,6 +42,7 @@ type CompEntity interface {
 	GetAttribute(string) string
 	Restore(string) error
 	Store() error
+	List() []CompEntity
 }
 
 type Entity interface {

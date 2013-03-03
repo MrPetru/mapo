@@ -116,11 +116,21 @@ func (p *project) Restore() error {
     return nil
 }
 
-func (p *project) SetAddon(entity, addonId string) {
+func (p *project) AddAddon(entity, addonId string) {
 	if p.Addons == nil {
 		p.Addons = make(map[string][]string)
 	}
-	p.Addons[entity] = []string{addonId}
+	ent, ok := p.Addons[entity]
+	if !ok {
+		return
+	}
+	for _, aId := range(ent) {
+		if aId == addonId {
+			return
+		}
+	}
+	ent = append(ent, addonId)
+	p.Addons[entity] = ent
 }
 
 // ritorna dal database la lista dei addon attivi per il progetto

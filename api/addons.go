@@ -25,6 +25,7 @@ package api
 
 import (
 	"mapo/addons"
+	"github.com/maponet/utils/log"
 )
 
 // GetAll restituisce la lista dei addon disponibili
@@ -56,22 +57,12 @@ func newAddonContainer() {
 }
 
 /*
-definizione de un singolo addon
-*/
-type addon struct {
-	id string
-	Constructors []func(addons.EntityContainer)
-	dependByAddons interface{}
-}
-
-/*
 usato al avvio quando i addon vengono registrati nella lista globale dei
 addons. Pero, viene chiamato dal addon stesso.
 */
-func (ac *addonContainer) NewAddon(id string) addons.Addon {//*addon {
+func (ac *addonContainer) NewAddon(id string) addons.Addon {
 	ad := new(addon)
-	//ad.entity = entity
-	ad.id = id
+	ad.dependByAddons = make(map[string]*addon)
 
 	if _, ok := Addons[id]; !ok {
 		Addons[id] = ad
@@ -82,10 +73,83 @@ func (ac *addonContainer) NewAddon(id string) addons.Addon {//*addon {
 }
 
 /*
+definizione de un singolo addon
+*/
+type addon struct {
+	id string
+	Constructors []func(addons.EntityContainer)
+	dependByAddons map[string]*addon
+}
+
+/*
 ogni addon ha una funzione che costruisce le entità necessari ad un
 funzionamento corretto. Al momento della registrazione del addon,
 SetConstructor collega il costruttore al  addon.
 */
 func (a *addon) SetConstructor(c func(addons.EntityContainer)) {
 	a.Constructors = append(a.Constructors, c)
+}
+
+func (a *addon) AddDependency(dependencyId string) {
+	dep, ok := Addons[dependencyId]
+	if ok {
+		a.dependByAddons[dependencyId] = dep
+		return
+	}
+	log.Error("cant find addon with ID=%s", dependencyId)
+}
+
+func orderByDependency(addonsId []string, Addons addonContainer) []string{
+	var hasDep []string = make([]string, 0)
+	var isDep []string = make([]string, 0)
+
+	for _, addId := range(addonsId) {
+		a, ok := Addons[addId]
+		if ok {
+			cycle(a, &hasDep, &isDep)
+		}
+	}
+	log.Debug("has=%v, is=%v", hasDep, isDep)
+
+	result := make([]string, 0)
+	// 0 -> n
+	for _, addId := range(isDep) {
+		if !inList(result, addId) {
+			result = append(result, addId)
+		}
+	}
+
+	// n -> 0
+	for i:=len(hasDep); i>0 ; i-- {
+		if !inList(result, hasDep[i-1]) {
+			result = append(result, hasDep[i-1])
+		}
+	}
+
+	log.Debug("aranged by dependency addons = %v", result)
+
+	return result
+}
+
+func cycle(a *addon, has, is *[]string) {
+	if len(a.dependByAddons) < 1 {
+		*is = append(*is, a.id)
+		return
+	}
+
+	*has = append(*has, a.id)
+
+	for _, d := range(a.dependByAddons) {
+		cycle(d, has, is)
+	}
+}
+
+func inList(list []string, elem string) bool {
+
+	for _, s := range(list) {
+		if s == elem {
+			return true
+		}
+	}
+	return false
 }

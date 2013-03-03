@@ -17,36 +17,20 @@ You should have received a copy of the GNU General Public License
 along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package scene
+package shotpatch
 
 import (
 	"mapo/addons"
 )
 
 func Register(addonContainer addons.Addons) {
-	addon := addonContainer.NewAddon("sc_base_v01")
+	addon := addonContainer.NewAddon("sh_base_v01_patch")
 	addon.SetConstructor(constructor)
+	addon.AddDependency("sh_base_v01")
 }
 
 func constructor(entityContainer addons.EntityContainer) {
 	// creare le entità qui
-	scene := entityContainer.NewEntity("scene")
-	scene.AddAttribute("name", addons.String)
-	scene.AddAttribute("description", addons.String)
-
-	scene.AddMethod("GET", "/prefix", namePrefix)
-}
-
-func namePrefix(entity addons.CompEntity, data addons.RequestData) (addons.CompEntity, error) {
-
-	entity.Restore("")
-
-	for _, e := range(entity.List()) {
-		name := e.GetAttribute("name")
-		name = "prefixed_"+name
-
-		e.SetAttribute("name", name)
-	}
-
-	return entity, nil
+	shot := entityContainer.GetEntity("shot")
+	shot.AddAttribute("parentname", addons.String)
 }

@@ -37,10 +37,11 @@ import (
 func newEntity(entity addons.CompEntity, data addons.RequestData) (addons.CompEntity, error) {
 	var err error
 
-	localEntity, ok := entity.(*Entity)
+	compE, ok := entity.(*composedEntity)
 	if !ok {
-		return nil, errors.New("not an entity")
+		return nil, errors.New("not a known type")
 	}
+	localEntity := compE.s
 
 	for key, _ := range(localEntity.attributes) {
 		attrValue := data.GetValue(key)
@@ -163,7 +164,7 @@ func (compE *composedEntity) restoreList() error {
 
 	collection := "projectentities"
 	ml := make([]map[string]interface{},0)
-	filter := bson.M{"projectId":compE.s.projectId}
+	filter := bson.M{"projectId":compE.s.projectId, "entityName":compE.s.name}
 	err := db.RestoreList(&ml, filter, collection)
 	if err != nil {
 		return err
@@ -276,6 +277,10 @@ func (e *Entity) GetAttribute(name string) string {
 	return ""
 }
 
+func (e *Entity) List() []addons.CompEntity {
+	return nil
+}
+
 func (e *Entity) AddMethod(method, path string, f addons.Method) {
 	if e.Function == nil {
 		e.Function = make(map[string] addons.Method)
@@ -301,7 +306,7 @@ func (e *Entity) Restore(id string) error {
 	m["_id"] = ""
 	delete(m, "id")
 
-	filter := bson.M{"_id":bson.ObjectIdHex(id), "projectId":e.projectId}
+	filter := bson.M{"_id":bson.ObjectIdHex(id), "projectId":e.projectId, "entityName":e.name}
 	err := db.RestoreOne(m, filter, collection)
 	if err != nil {
 		return err
@@ -327,6 +332,7 @@ func (e *Entity) Store() error {
 	id := bson.NewObjectId()
 	m["_id"] = id
 	m["projectId"] = e.projectId
+	m["entityName"] = e.name
 	delete(m, "id")
 	err := db.Store(m, collection)
 	delete(m, "_id")
@@ -351,6 +357,8 @@ func (es EntityContainer) NewEntity(name string) addons.Entity {
 	e.name = name
 	e.Function = make(map[string] addons.Method)
 	e.attributes = make(map[string]attribute)
+	e.AddAttribute("id", addons.String)
+	e.AddAttribute("entityName", addons.String)
 	e.AddMethod("GET", "/{id}", getOne)
 	e.AddMethod("GET", "/", getAll)
 	e.AddMethod("POST", "/", newEntity)
@@ -411,7 +419,7 @@ func createPattern(method, path string) string {
         pathSlice := strings.Split(path[1:], "/")
         for _, v := range(pathSlice) {
             if v[0] == '{' {
-                pattern = pattern + "[0-9a-z_\\ \\.\\+\\-]*/"
+                pattern = pattern + "[0-9a-z_\\ \\.\\+\\-]{24,}/"
             } else {
                 pattern = pattern + v + "/"
             }
