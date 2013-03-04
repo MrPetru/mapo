@@ -26,6 +26,7 @@ import (
     "encoding/json"
     "net/http"
     "fmt"
+	"crypto/md5"
 )
 
 // statusResult aiuta a formattare i dati inviati verso il cliente
@@ -72,4 +73,14 @@ func (ce *coreErr) append(key string, err interface{}) {
     } else {
         (*ce)[key] = append((*ce)[key], err.(string))
     }
+}
+
+// crea la soma md5 di una stringa
+func Md5sum(value string) string {
+    sum := md5.New()
+    sum.Write([]byte(value))
+
+    result := fmt.Sprintf("%x", sum.Sum(nil))
+
+    return result
 }

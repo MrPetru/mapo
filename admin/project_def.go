@@ -17,7 +17,7 @@ You should have received a copy of the GNU General Public License
 along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package objectspace
+package admin
 
 import (
     "github.com/maponet/utils/log"
@@ -122,7 +122,7 @@ func (p *project) AddAddon(entity, addonId string) {
 	}
 	ent, ok := p.Addons[entity]
 	if !ok {
-		return
+		p.Addons[entity] = make([]string, 0)
 	}
 	for _, aId := range(ent) {
 		if aId == addonId {

@@ -21,21 +21,20 @@ package admin
 
 import (
     "github.com/maponet/utils/log"
-    "mapo/objectspace"
 
     "net/http"
     "labix.org/v2/mgo/bson"
 )
 
 // NewStudio crea un nuovo studio
-func NewStudio(out http.ResponseWriter, in *http.Request) {
+func httpNewStudio(out http.ResponseWriter, in *http.Request) {
     // create new studio
     log.Info("executing NewStudio function")
 
     errors := NewCoreErr()
 
     // creamo un nuovo contenitore di tipo studio
-    studio := objectspace.NewStudio()
+    studio := NewStudio()
 
     name := in.FormValue("name")
     err := studio.SetName(name)
@@ -69,7 +68,7 @@ func NewStudio(out http.ResponseWriter, in *http.Request) {
 }
 
 // GetStudio restituisce al utente le informazioni di un solo progetto
-func GetStudio(out http.ResponseWriter, in *http.Request) {
+func httpGetStudio(out http.ResponseWriter, in *http.Request) {
 
     errors := NewCoreErr()
 
@@ -82,7 +81,7 @@ func GetStudio(out http.ResponseWriter, in *http.Request) {
 
     currentuid := in.FormValue("currentuid")
 
-    studio, err := objectspace.StudioRestoreAll(bson.M{"owners":currentuid, "_id":id})
+    studio, err := StudioRestoreAll(bson.M{"owners":currentuid, "_id":id})
 
     if err != nil || len(studio) != 1 {
         errors.append("on restore", "error on studio restore from database")
@@ -108,14 +107,14 @@ le situazioni:
     NOTA: in entrambe le situazioni, per cancellare un valore si deve inviare
     un dato nullo per quella chiave.
 */
-func UpdateStudio(out http.ResponseWriter, in *http.Request) {
+func httpUpdateStudio(out http.ResponseWriter, in *http.Request) {
     // patch o normal_update?
 
     // proviamo a implementare questa funzione come patch: i campi non ricevuti
     // verranno ignorati.
 
     sid := in.FormValue("sid")
-    studio := objectspace.NewStudio()
+    studio := NewStudio()
     studio.SetId(sid)
     err := studio.Restore()
     if err != nil {
@@ -145,11 +144,11 @@ func UpdateStudio(out http.ResponseWriter, in *http.Request) {
 
 // GetStudioAll restituisce al cliente le informazioni di piu' progetti in una
 // lista
-func GetStudioAll(out http.ResponseWriter, in *http.Request) {
+func httpGetStudioAll(out http.ResponseWriter, in *http.Request) {
     // create new studio
     currentuid := in.FormValue("currentuid")
 
-    studios, err := objectspace.StudioRestoreAll(bson.M{"owners":currentuid})
+    studios, err := StudioRestoreAll(bson.M{"owners":currentuid})
 
     if err != nil {
         WriteJsonResult(out, err, "error")

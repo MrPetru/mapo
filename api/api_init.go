@@ -18,21 +18,23 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 /*
-objectspace contiene la definizione dei oggetti come User, Studio, Project
+Package api implements the API framework used by addons.
 */
-package objectspace
+package api
 
 import (
-    "fmt"
-    "crypto/md5"
+	"mapo/admin"
+	"net/http"
 )
 
-// crea la soma md5 di una stringa
-func Md5sum(value string) string {
-    sum := md5.New()
-    sum.Write([]byte(value))
+type mux interface {
+	HandleFunc(string, string, func(http.ResponseWriter, *http.Request))
+}
 
-    result := fmt.Sprintf("%x", sum.Sum(nil))
+func Activate(muxer mux) {
 
-    return result
+    muxer.HandleFunc("GET", "/api/{pid}/.*", admin.Authenticate(HttpWrapper))
+    muxer.HandleFunc("POST", "/api/{pid}/.*", admin.Authenticate(HttpWrapper))
+    muxer.HandleFunc("GET", "/api/{pid}", admin.Authenticate(HttpWrapper))
+
 }
