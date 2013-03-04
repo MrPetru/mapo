@@ -17,25 +17,33 @@ You should have received a copy of the GNU General Public License
 along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package shot
+package api
 
 import (
+	"mapo/addons/repo/go/scene"
+	"mapo/addons/repo/go/shot"
+	"mapo/addons/repo/go/shotpatch"
+
 	"mapo/addons"
 )
 
-func Register(addon addons.Addon) {
-	//addon := addonContainer.NewAddon("sh_base_v01")
-	addon.SetName("shot_base_structure")
-	addon.SetAuthor("maponet")
-	addon.SetVersion(1)
-	addon.SetConstructor(constructor)
-	addon.AddDependency("scene_base_structure:maponet:0001")
-}
+func RegisterAddons() {
+	// addons
+	registers := []func(addons.Addon){
+		scene.Register, shot.Register, shotpatch.Register,
+		}
 
-func constructor(entityContainer addons.EntityContainer) {
-	// creare le entità qui
-	shot := entityContainer.NewEntity("shot")
-	shot.AddAttribute("name", addons.String)
-	shot.AddAttribute("description", addons.String)
-	shot.AddAttribute("parentid", addons.String)
+	newAddonContainer()
+	for _, r := range(registers) {
+		add := new(addon)
+		add.dependByAddons = make(map[string]*addon)
+		r(add)
+		err := add.CreateId()
+		if err == nil {
+			Addons[add.id] = add
+		}
+	}
+	//scene.Register(&Addons)
+	//shot.Register(&Addons)
+	//shotpatch.Register(&Addons)
 }

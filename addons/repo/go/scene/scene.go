@@ -23,8 +23,11 @@ import (
 	"mapo/addons"
 )
 
-func Register(addonContainer addons.Addons) {
-	addon := addonContainer.NewAddon("sc_base_v01")
+func Register(addon addons.Addon) {
+	//addon := addonContainer.NewAddon("sc_base_v01")
+	addon.SetName("scene_base_structure")
+	addon.SetAuthor("maponet")
+	addon.SetVersion(1)
 	addon.SetConstructor(constructor)
 }
 

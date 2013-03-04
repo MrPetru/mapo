@@ -30,6 +30,9 @@ type Addons interface {
 type Addon interface {
 	SetConstructor(func(EntityContainer))
 	AddDependency(string)
+	SetName(string)
+	SetAuthor(string)
+	SetVersion(int)
 }
 
 type EntityContainer interface {

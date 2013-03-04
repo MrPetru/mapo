@@ -26,13 +26,9 @@ package api
 import (
 	"mapo/addons"
 	"github.com/maponet/utils/log"
+	"fmt"
+	"errors"
 )
-
-// GetAll restituisce la lista dei addon disponibili
-func GetAll() []string {
-    // crea una lista di tutti i addon
-    return nil
-}
 
 const (
 	String = 0
@@ -56,28 +52,32 @@ func newAddonContainer() {
 	Addons = make(addonContainer)
 }
 
-/*
-usato al avvio quando i addon vengono registrati nella lista globale dei
-addons. Pero, viene chiamato dal addon stesso.
-*/
-func (ac *addonContainer) NewAddon(id string) addons.Addon {
-	ad := new(addon)
-	ad.dependByAddons = make(map[string]*addon)
-
-	if _, ok := Addons[id]; !ok {
-		ad.id = id
-		Addons[id] = ad
-		return ad
-	}
-
-	return nil
-}
+///*
+//Usato al avvio quando i addon vengono registrati nella lista globale dei
+//Addons. Pero, viene chiamato dal addon stesso.
+//*/
+//Func (ac *addonContainer) NewAddon(id string) addons.Addon {
+//	ad := new(addon)
+//	ad.dependByAddons = make(map[string]*addon)
+//
+//	if _, ok := Addons[id]; !ok {
+//		ad.id = id
+//		Addons[id] = ad
+//		return ad
+//	}
+//
+//	return nil
+//}
 
 /*
 definizione de un singolo addon
 */
 type addon struct {
 	id string
+	name string
+	author string
+	version int
+
 	Constructors []func(addons.EntityContainer)
 	dependByAddons map[string]*addon
 }
@@ -98,6 +98,26 @@ func (a *addon) AddDependency(dependencyId string) {
 		return
 	}
 	log.Error("cant find addon with ID=%s", dependencyId)
+}
+
+func (a *addon) SetAuthor(author string) {
+	a.author = author
+}
+
+func (a *addon) SetName(name string) {
+	a.name = name
+}
+
+func (a *addon) SetVersion(v int) {
+	a.version = v
+}
+
+func (a *addon) CreateId() error {
+	if (len(a.author)>0 && len(a.name)>0 && a.version>0) {
+		a.id = fmt.Sprintf("%s:%s:%04d", a.name, a.author, a.version)
+		return nil
+	}
+	return errors.New("cant create addon ID")
 }
 
 func orderByDependency(addonsId []string, Addons addonContainer) []string{

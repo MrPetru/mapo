@@ -23,10 +23,13 @@ import (
 	"mapo/addons"
 )
 
-func Register(addonContainer addons.Addons) {
-	addon := addonContainer.NewAddon("sh_base_v01_patch")
+func Register(addon addons.Addon) {
+	//addon := addonContainer.NewAddon("sh_base_v01_patch")
+	addon.SetName("shot_base_structure_patch")
+	addon.SetAuthor("maponet")
+	addon.SetVersion(1)
 	addon.SetConstructor(constructor)
-	addon.AddDependency("sh_base_v01")
+	addon.AddDependency("shot_base_structure:maponet:0001")
 }
 
 func constructor(entityContainer addons.EntityContainer) {

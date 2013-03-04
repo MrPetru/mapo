@@ -31,10 +31,6 @@ import (
     "strings"
 	"errors"
     "labix.org/v2/mgo/bson"
-
-	"mapo/addons/repo/go/scene"
-	"mapo/addons/repo/go/shot"
-	"mapo/addons/repo/go/shotpatch"
 )
 
 // apiData e' il contenitore dei dati che vengono inviati verso la funzione
@@ -61,13 +57,6 @@ func (data *apiData) GetValue(name string) string {
 		return ""
 	}
 	return dataElement[0]
-}
-
-func RegisterAddons() {
-	newAddonContainer()
-	scene.Register(&Addons)
-	shot.Register(&Addons)
-	shotpatch.Register(&Addons)
 }
 
 // NewApiData crea un nuovo oggetto apiData
