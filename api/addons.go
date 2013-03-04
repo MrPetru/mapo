@@ -65,6 +65,7 @@ func (ac *addonContainer) NewAddon(id string) addons.Addon {
 	ad.dependByAddons = make(map[string]*addon)
 
 	if _, ok := Addons[id]; !ok {
+		ad.id = id
 		Addons[id] = ad
 		return ad
 	}
@@ -107,9 +108,10 @@ func orderByDependency(addonsId []string, Addons addonContainer) []string{
 		a, ok := Addons[addId]
 		if ok {
 			cycle(a, &hasDep, &isDep)
+		} else {
+			log.Error("name %s isn't in addon list", addId)
 		}
 	}
-	log.Debug("has=%v, is=%v", hasDep, isDep)
 
 	result := make([]string, 0)
 	// 0 -> n
