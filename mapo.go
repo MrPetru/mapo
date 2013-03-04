@@ -139,11 +139,7 @@ func main() {
 	log.Info("Registering handlers")
 
 	admin.Activate(muxer)
-
-    //muxer.HandleFunc("GET", "/api/{pid}", admin.Authenticate(admin.GetProject))
-    muxer.HandleFunc("GET", "/api/{pid}/.*", admin.Authenticate(api.HttpWrapper))
-    muxer.HandleFunc("POST", "/api/{pid}/.*", admin.Authenticate(api.HttpWrapper))
-    muxer.HandleFunc("GET", "/api/{pid}", admin.Authenticate(api.HttpWrapper))
+	api.Activate(muxer)
 
     muxer.HandleFunc("GET", "/", webui.Root)
 
