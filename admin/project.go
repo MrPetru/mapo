@@ -20,8 +20,6 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 package admin
 
 import (
-    "mapo/objectspace"
-
     "net/http"
     "labix.org/v2/mgo/bson"
 )
@@ -29,11 +27,11 @@ import (
 /*
 NewProject crea un nuovo progetto.
 */
-func NewProject(out http.ResponseWriter, in *http.Request) {
+func httpNewProject(out http.ResponseWriter, in *http.Request) {
 
     errors := NewCoreErr()
 
-    project := objectspace.NewProject()
+    project := NewProject()
 
     name := in.FormValue("name")
     err := project.SetName(name)
@@ -46,7 +44,7 @@ func NewProject(out http.ResponseWriter, in *http.Request) {
     sidCookie, err := in.Cookie("sid")
     studioID := sidCookie.Value
 
-    studio := objectspace.NewStudio()
+    studio := NewStudio()
     err = studio.SetId(studioID)
     errors.append("studioid", err)
 
@@ -58,7 +56,7 @@ func NewProject(out http.ResponseWriter, in *http.Request) {
         return
     }
 
-    id := objectspace.Md5sum(studioID + name)
+    id := Md5sum(studioID + name)
     err = project.SetId(id)
     errors.append("id", err)
 
@@ -87,7 +85,7 @@ func NewProject(out http.ResponseWriter, in *http.Request) {
 GetProjectAll restituisce al cliente una lista di progetti per il studio attivo
 nella sessione del utente.
 */
-func GetProjectAll(out http.ResponseWriter, in *http.Request) {
+func httpGetProjectAll(out http.ResponseWriter, in *http.Request) {
 
     errors := NewCoreErr()
 
@@ -101,7 +99,7 @@ func GetProjectAll(out http.ResponseWriter, in *http.Request) {
 
     filter := bson.M{"studioid":studioID}
 
-    projectlist, err := objectspace.ProjectRestorList(filter)
+    projectlist, err := ProjectRestorList(filter)
 
     if err != nil {
         WriteJsonResult(out, err, "error")
@@ -113,7 +111,7 @@ func GetProjectAll(out http.ResponseWriter, in *http.Request) {
 /*
 GetProject restituisce al utente le informazioni di un singolo progetto.
 */
-func GetProject(out http.ResponseWriter, in *http.Request) {
+func httpGetProject(out http.ResponseWriter, in *http.Request) {
 
     errors := NewCoreErr()
 
@@ -133,7 +131,7 @@ func GetProject(out http.ResponseWriter, in *http.Request) {
 
     sid := sidCookie.Value
 
-    studio := objectspace.NewStudio()
+    studio := NewStudio()
     studio.SetId(sid)
     err = studio.Restore()
     if err != nil {
@@ -144,7 +142,7 @@ func GetProject(out http.ResponseWriter, in *http.Request) {
         return
     }
 
-    project := objectspace.NewProject()
+    project := NewProject()
     project.SetId(id)
     err = project.Restore()
     if err != nil {
@@ -154,7 +152,7 @@ func GetProject(out http.ResponseWriter, in *http.Request) {
     WriteJsonResult(out, project, "ok")
 }
 
-func AppendAddon(out http.ResponseWriter, in *http.Request) {
+func httpAppendAddon(out http.ResponseWriter, in *http.Request) {
 	errors := NewCoreErr()
 
 	id := in.FormValue("pid")
@@ -167,7 +165,7 @@ func AppendAddon(out http.ResponseWriter, in *http.Request) {
 	addonId := in.FormValue("addonid")
 	entityName := in.FormValue("entityname")
 
-	project := objectspace.NewProject()
+	project := NewProject()
 	project.SetId(id)
 	err := project.Restore()
 	if err != nil {

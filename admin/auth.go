@@ -20,7 +20,6 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 package admin
 
 import (
-    "mapo/objectspace"
 	"github.com/maponet/utils/log"
 	"github.com/maponet/utils/conf"
 
@@ -102,10 +101,10 @@ func Authenticate(handleFunc func(http.ResponseWriter, *http.Request)) func(http
             return
         }
 
-        if objectspace.Md5sum(uid+cookie_secret) == authid {
+        if Md5sum(uid+cookie_secret) == authid {
 
             // ora verifichiamo se nella database esiste un utente con questo ID
-            user := objectspace.NewUser()
+            user := NewUser()
             user.SetId(uid)
             err := user.Restore()
             if err == nil {
@@ -180,7 +179,7 @@ func OAuthCallBack(out http.ResponseWriter, in *http.Request) {
         log.Debug("get userData error: %v", err)
     }
 
-    user := objectspace.NewUser()
+    user := NewUser()
 
     /*
     per lo scenario di questa interrogazione i dati ricevuti sono:
@@ -241,7 +240,7 @@ func OAuthCallBack(out http.ResponseWriter, in *http.Request) {
     }
 
     // TODO: a valid value for authentication cookie
-    authid := objectspace.Md5sum(user.Id+cookie_secret)
+    authid := Md5sum(user.Id+cookie_secret)
     http.SetCookie(out, &http.Cookie{Name:"authid", Value: authid, Path: "/"})
 
     http.SetCookie(out, &http.Cookie{Name:"uid", Value: user.Id, Path: "/"})

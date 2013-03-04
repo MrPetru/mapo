@@ -21,21 +21,20 @@ package admin
 
 import (
     "github.com/maponet/utils/log"
-    "mapo/objectspace"
 
     "net/http"
 )
 
 // GetUser restituisce un utente che è gia salvato nella database
 // func GetUser(inValues values) interface{} {
-func GetUser(out http.ResponseWriter, in *http.Request) {
+func httpGetUser(out http.ResponseWriter, in *http.Request) {
 
     log.Info("executing GetUser function")
 
     errors := NewCoreErr()
 
     // cearmo un nuovo ogetto/contenitore per il utente richiesto
-    user := objectspace.NewUser()
+    user := NewUser()
 
     // aggiorniamo il valore del id del utente, che servirà per ricavare l'utente
     // dal database

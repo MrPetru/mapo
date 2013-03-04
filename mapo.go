@@ -138,30 +138,12 @@ func main() {
 	// register handlers
 	log.Info("Registering handlers")
 
-    muxer.HandleFunc("GET", "/admin/user/{uid}", admin.Authenticate(admin.GetUser))
-
-    muxer.HandleFunc("POST", "/admin/studio", admin.Authenticate(admin.NewStudio))
-    muxer.HandleFunc("GET", "/admin/studio", admin.Authenticate(admin.GetStudioAll))
-    muxer.HandleFunc("GET", "/admin/studio/{sid}", admin.Authenticate(admin.GetStudio))
-    muxer.HandleFunc("GET", "/admin/studio/{sid}/update", admin.Authenticate(admin.UpdateStudio))
-
-    muxer.HandleFunc("POST", "/admin/project", admin.Authenticate(admin.NewProject))
-    muxer.HandleFunc("GET", "/admin/project", admin.Authenticate(admin.GetProjectAll))
-    muxer.HandleFunc("GET", "/admin/project/{pid}", admin.Authenticate(admin.GetProject))
-    muxer.HandleFunc("GET", "/admin/project/{pid}/appendaddon", admin.Authenticate(admin.AppendAddon))
+	admin.Activate(muxer)
 
     //muxer.HandleFunc("GET", "/api/{pid}", admin.Authenticate(admin.GetProject))
     muxer.HandleFunc("GET", "/api/{pid}/.*", admin.Authenticate(api.HttpWrapper))
     muxer.HandleFunc("POST", "/api/{pid}/.*", admin.Authenticate(api.HttpWrapper))
     muxer.HandleFunc("GET", "/api/{pid}", admin.Authenticate(api.HttpWrapper))
-
-    muxer.HandleFunc("GET", "/login/{oauthprovider}", admin.Login)
-    //muxer.HandleFunc("GET", "/logout", admin.Logout)
-
-    // OAuth
-    // su questo url viene reinderizato il cliente dopo che la procedura di authenticazione
-    // sul server del servizio aviene con successo o meno.
-    muxer.HandleFunc("GET", "/oauth2callback", admin.OAuthCallBack)
 
     muxer.HandleFunc("GET", "/", webui.Root)
 

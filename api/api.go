@@ -25,7 +25,6 @@ package api
 import (
     "github.com/maponet/utils/log"
     "mapo/admin"
-    "mapo/objectspace"
 
     "net/http"
     "strings"
@@ -85,7 +84,7 @@ func ApiRouter(data *apiData) (interface{}, error) {//(*apiData, error) {
 
     // verifica se il progetto e lo studio sono collegati
     {
-        studios, err := objectspace.StudioRestoreAll(bson.M{"_id":data.StudioId,"projects":data.ProjectId})
+        studios, err := admin.StudioRestoreAll(bson.M{"_id":data.StudioId,"projects":data.ProjectId})
         if err != nil {
 			return nil, err
 		}
@@ -95,7 +94,7 @@ func ApiRouter(data *apiData) (interface{}, error) {//(*apiData, error) {
         }
     }
 
-    project := objectspace.NewProject()
+    project := admin.NewProject()
     project.SetId(data.ProjectId)
     err = project.Restore()
     if err != nil {
