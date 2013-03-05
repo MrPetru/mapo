@@ -56,7 +56,7 @@ func main() {
 	if confErr == nil {
 		log.Info("Loaded configuration file: %s", flagConfPath)
 	} else {
-		log.Error("Can't load config file (%s), using defaults", confErr.Error())
+		log.Fatal("Can't load config file at: %s (%s)", flagConfPath, confErr.Error())
 	}
 	log.Info("Setting log level to: %s", logLevel)
 
