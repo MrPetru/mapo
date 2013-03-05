@@ -17,33 +17,23 @@ You should have received a copy of the GNU General Public License
 along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package api
+package collaborator
 
 import (
-	"mapo/addons/repo/go/scene"
-	"mapo/addons/repo/go/shot"
-	"mapo/addons/repo/go/shotpatch"
-	"mapo/addons/repo/go/collaborator"
-	"mapo/addons/repo/go/asset"
-
 	"mapo/addons"
 )
 
-func RegisterAddons() {
-	// addons
-	registers := []func(addons.Addon){
-		scene.Register, shot.Register, shotpatch.Register, collaborator.Register,
-		asset.Register,
-		}
+func Register(addon addons.Addon) {
+	addon.SetName("collaborator")
+	addon.SetAuthor("maponet")
+	addon.SetVersion(1)
+	addon.SetConstructor(constructor)
+}
 
-	newAddonContainer()
-	for _, r := range(registers) {
-		add := new(addon)
-		add.dependByAddons = make(map[string]*addon)
-		r(add)
-		err := add.CreateId()
-		if err == nil {
-			Addons[add.id] = add
-		}
-	}
+func constructor(entityContainer addons.EntityContainer) {
+	// creare le entità qui
+	scene := entityContainer.NewEntity("collaborator")
+	scene.AddAttribute("name", addons.String)
+	scene.AddAttribute("uuid", addons.String)
+	scene.AddAttribute("picture", addons.String)
 }
