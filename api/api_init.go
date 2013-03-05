@@ -33,8 +33,8 @@ type mux interface {
 
 func Activate(muxer mux) {
 
-    muxer.HandleFunc("GET", "/api/{pid}/.*", admin.Authenticate(HttpWrapper))
-    muxer.HandleFunc("POST", "/api/{pid}/.*", admin.Authenticate(HttpWrapper))
-    muxer.HandleFunc("GET", "/api/{pid}", admin.Authenticate(HttpWrapper))
+	muxer.HandleFunc("GET", "/api/{pid}/.*", admin.Authenticate(HttpWrapper))
+	muxer.HandleFunc("POST", "/api/{pid}/.*", admin.Authenticate(HttpWrapper))
+	muxer.HandleFunc("GET", "/api/{pid}", admin.Authenticate(HttpWrapper))
 
 }

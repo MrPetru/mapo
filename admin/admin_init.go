@@ -31,22 +31,22 @@ func Activate(muxer mux) {
 
 	muxer.HandleFunc("GET", "/admin/user/{uid}", Authenticate(httpGetUser))
 
-    muxer.HandleFunc("POST", "/admin/studio", Authenticate(httpNewStudio))
-    muxer.HandleFunc("GET", "/admin/studio", Authenticate(httpGetStudioAll))
-    muxer.HandleFunc("GET", "/admin/studio/{sid}", Authenticate(httpGetStudio))
-    muxer.HandleFunc("GET", "/admin/studio/{sid}/update", Authenticate(httpUpdateStudio))
+	muxer.HandleFunc("POST", "/admin/studio", Authenticate(httpNewStudio))
+	muxer.HandleFunc("GET", "/admin/studio", Authenticate(httpGetStudioAll))
+	muxer.HandleFunc("GET", "/admin/studio/{sid}", Authenticate(httpGetStudio))
+	muxer.HandleFunc("GET", "/admin/studio/{sid}/update", Authenticate(httpUpdateStudio))
 
-    muxer.HandleFunc("POST", "/admin/project", Authenticate(httpNewProject))
-    muxer.HandleFunc("GET", "/admin/project", Authenticate(httpGetProjectAll))
-    muxer.HandleFunc("GET", "/admin/project/{pid}", Authenticate(httpGetProject))
-    muxer.HandleFunc("GET", "/admin/project/{pid}/appendaddon", Authenticate(httpAppendAddon))
+	muxer.HandleFunc("POST", "/admin/project", Authenticate(httpNewProject))
+	muxer.HandleFunc("GET", "/admin/project", Authenticate(httpGetProjectAll))
+	muxer.HandleFunc("GET", "/admin/project/{pid}", Authenticate(httpGetProject))
+	muxer.HandleFunc("GET", "/admin/project/{pid}/appendaddon", Authenticate(httpAppendAddon))
 
 	muxer.HandleFunc("GET", "/login/{oauthprovider}", Login)
-    //muxer.HandleFunc("GET", "/logout", admin.Logout)
+	//muxer.HandleFunc("GET", "/logout", admin.Logout)
 
-    // OAuth
-    // su questo url viene reinderizato il cliente dopo che la procedura di authenticazione
-    // sul server del servizio aviene con successo o meno.
-    muxer.HandleFunc("GET", "/oauth2callback", OAuthCallBack)
+	// OAuth
+	// su questo url viene reinderizato il cliente dopo che la procedura di authenticazione
+	// sul server del servizio aviene con successo o meno.
+	muxer.HandleFunc("GET", "/oauth2callback", OAuthCallBack)
 
 }

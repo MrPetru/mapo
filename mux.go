@@ -20,14 +20,14 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
-    "github.com/maponet/utils/log"
+	"github.com/maponet/utils/log"
 
-    "os"
-    "sync"
-    "time"
-    "regexp"
-    "strings"
-    "net/http"
+	"net/http"
+	"os"
+	"regexp"
+	"strings"
+	"sync"
+	"time"
 )
 
 /*
@@ -41,32 +41,32 @@ interrompere il server usando la combinazione dei tasti CTRL+C
 */
 type ServeMux struct {
 
-    // lista dei handler registrati, con o senza autenticazione
-    m map[string]Handler
-    mVars map[string]map[int]string
+	// lista dei handler registrati, con o senza autenticazione
+	m     map[string]Handler
+	mVars map[string]map[int]string
 
-    // il numero delle connessione attive in questo momento
-    current_connections int
-    lock sync.Mutex
+	// il numero delle connessione attive in questo momento
+	current_connections int
+	lock                sync.Mutex
 
-    // il server è o no in fase di chiusura
-    closing bool
+	// il server è o no in fase di chiusura
+	closing bool
 }
 
 func (mux *ServeMux) HandleFunc(method, path string, handle func(http.ResponseWriter, *http.Request)) {
-    handlerFunc := new(http.HandlerFunc)
-    *handlerFunc = handle
+	handlerFunc := new(http.HandlerFunc)
+	*handlerFunc = handle
 
-    pattern := createPattern(method, path)
+	pattern := createPattern(method, path)
 
-    mux.m[pattern] = handlerFunc
-    mux.mVars[pattern] = createUrlVars(path)
+	mux.m[pattern] = handlerFunc
+	mux.mVars[pattern] = createUrlVars(path)
 }
 
 func (mux *ServeMux) Handle(method, path string, handler Handler) {
-    pattern := createPattern(method, path)
-    mux.m[pattern] = handler
-    mux.mVars[pattern] = createUrlVars(path)
+	pattern := createPattern(method, path)
+	mux.m[pattern] = handler
+	mux.mVars[pattern] = createUrlVars(path)
 }
 
 /*
@@ -74,26 +74,26 @@ createPattern, crea l'espressione regulare che si usa più tardi per trovare
 il handler corretto per il path/risorsa richiesta.
 */
 func createPattern(method, path string) string {
-    pattern := "(?i)^"
+	pattern := "(?i)^"
 
-    if method != "" {
-        pattern = pattern + method + ":/"
-    } else {
-        pattern = pattern + "(GET|POST)" + ":/"
-    }
+	if method != "" {
+		pattern = pattern + method + ":/"
+	} else {
+		pattern = pattern + "(GET|POST)" + ":/"
+	}
 
-    if len(path) > 1 {
-        pathSlice := strings.Split(path[1:], "/")
-        for _, v := range(pathSlice) {
-            if v[0] == '{' {
-                pattern = pattern + "[0-9a-z_\\ \\.\\+\\-]*/"
-            } else {
-                pattern = pattern + v + "/"
-            }
-        }
-    }
-    pattern = pattern + "$"
-    return pattern
+	if len(path) > 1 {
+		pathSlice := strings.Split(path[1:], "/")
+		for _, v := range pathSlice {
+			if v[0] == '{' {
+				pattern = pattern + "[0-9a-z_\\ \\.\\+\\-]*/"
+			} else {
+				pattern = pattern + v + "/"
+			}
+		}
+	}
+	pattern = pattern + "$"
+	return pattern
 }
 
 /*
@@ -103,20 +103,20 @@ al interno delle quali si trova il nome della variabile. Questa mappa sarà usat
 più tardi per passare i dati a forma di copie (chiave:valore) ai handler.
 */
 func createUrlVars(path string) map[int]string {
-    vlist := strings.Split(path, "/")
+	vlist := strings.Split(path, "/")
 
-    data := make(map[int]string,0)
+	data := make(map[int]string, 0)
 
-    for i, v := range(vlist) {
-        if len(v) < 3 {
-            continue
-        }
-        if v[0] == '{' && v[len(v)-1] == '}' {
-            data[i] = v[1:len(v)-1]
-        }
-    }
+	for i, v := range vlist {
+		if len(v) < 3 {
+			continue
+		}
+		if v[0] == '{' && v[len(v)-1] == '}' {
+			data[i] = v[1 : len(v)-1]
+		}
+	}
 
-    return data
+	return data
 }
 
 /*
@@ -124,40 +124,40 @@ match, è usata per identificare quale dei handler corrisponde per un certo url.
 Questa funzione fa utilizzo dei pattern (espressioni regolari).
 */
 func (mux *ServeMux) match(r *http.Request) (Handler, string) {
-    method := r.Method
-    url := r.URL.Path
+	method := r.Method
+	url := r.URL.Path
 
-    if url[len(url)-1] != '/' {
-        url = url + "/"
-    }
+	if url[len(url)-1] != '/' {
+		url = url + "/"
+	}
 
-    var handler Handler
-    var pattern string
+	var handler Handler
+	var pattern string
 
-    for k, v := range(mux.m) {
-        matching, _ := regexp.MatchString(k, method + ":" + url)
-        if matching {
-            handler = v
-            pattern = k
-            break
-        }
-    }
+	for k, v := range mux.m {
+		matching, _ := regexp.MatchString(k, method+":"+url)
+		if matching {
+			handler = v
+			pattern = k
+			break
+		}
+	}
 
-    if handler != nil {
-        return handler, pattern
-    }
-    return http.NotFoundHandler(), ""
+	if handler != nil {
+		return handler, pattern
+	}
+	return http.NotFoundHandler(), ""
 }
 
 /*
 NewServeMux, restituisce un nuovo miltiplixier personalizzato.
 */
 func NewServeMux() *ServeMux {
-    mux := new(ServeMux)
-    mux.m = make(map[string]Handler, 0)
-    mux.mVars = make(map[string]map[int]string, 0)
+	mux := new(ServeMux)
+	mux.m = make(map[string]Handler, 0)
+	mux.mVars = make(map[string]map[int]string, 0)
 
-    return mux
+	return mux
 }
 
 /*
@@ -166,7 +166,7 @@ handler originale del modulo http di go.
 TODO: Probabilmente è più corretto usare il http.Handler, resta da verificare.
 */
 type Handler interface {
-    ServeHTTP(http.ResponseWriter, *http.Request)
+	ServeHTTP(http.ResponseWriter, *http.Request)
 }
 
 // ServeHTTP e la funzione che vine eseguita come gorutine ogni volta che
@@ -176,32 +176,32 @@ type Handler interface {
 // Comunque, il server http viene interrotto in maniera brutta ma senza alcun
 // rischio. TODO: approfondire questa feature se servirà.
 func (mux *ServeMux) ServeHTTP(out http.ResponseWriter, in *http.Request) {
-    if !mux.closing {
-        start := time.Now()
-        defer func() {
-            log.Info("time: %v for %s", time.Since(start), in.URL.Path)
-        }()
+	if !mux.closing {
+		start := time.Now()
+		defer func() {
+			log.Info("time: %v for %s", time.Since(start), in.URL.Path)
+		}()
 
-        mux.lock.Lock()
-        mux.current_connections++
-        mux.lock.Unlock()
+		mux.lock.Lock()
+		mux.current_connections++
+		mux.lock.Unlock()
 
-        defer func() {
-            mux.lock.Lock()
-            mux.current_connections--
-            mux.lock.Unlock()
-        }()
+		defer func() {
+			mux.lock.Lock()
+			mux.current_connections--
+			mux.lock.Unlock()
+		}()
 
-        handle, pattern := mux.match(in)
-        if len(pattern) > 0 {
-            in.ParseMultipartForm(0)
-            urlValues := strings.Split(in.URL.Path, "/")
-            for k, v := range(mux.mVars[pattern]) {
-                in.Form[v] = []string{urlValues[k]}
-            }
-        }
-        handle.ServeHTTP(out, in)
-    }
+		handle, pattern := mux.match(in)
+		if len(pattern) > 0 {
+			in.ParseMultipartForm(0)
+			urlValues := strings.Split(in.URL.Path, "/")
+			for k, v := range mux.mVars[pattern] {
+				in.Form[v] = []string{urlValues[k]}
+			}
+		}
+		handle.ServeHTTP(out, in)
+	}
 }
 
 // se viene richiesto che l'applicazione si deve chiudere, in questo momento si
@@ -211,19 +211,19 @@ func (mux *ServeMux) ServeHTTP(out http.ResponseWriter, in *http.Request) {
 // server venga chiuso non appena le connessione attive saranno zero.
 func (mux *ServeMux) getSignalAndClose(c chan os.Signal) {
 
-    _ = <-c
-    log.Info("closing ...")
-    mux.closing = true
+	_ = <-c
+	log.Info("closing ...")
+	mux.closing = true
 
-    // TODO: send notification to load balancing that this node is unavailable
+	// TODO: send notification to load balancing that this node is unavailable
 
-    for {
-        if mux.current_connections == 0 {
-            log.Info("bye ... :)")
-            os.Exit(1)
-        } else {
-            log.Info("waiting for %d opened connections", mux.current_connections)
-            time.Sleep(500 * time.Millisecond)
-        }
-    }
+	for {
+		if mux.current_connections == 0 {
+			log.Info("bye ... :)")
+			os.Exit(1)
+		} else {
+			log.Info("waiting for %d opened connections", mux.current_connections)
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
 }

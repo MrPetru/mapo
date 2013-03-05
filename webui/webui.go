@@ -23,11 +23,11 @@ Package webui implements the UI framework used by addons.
 package webui
 
 import (
-    "net/http"
+	"net/http"
 )
 
 // questa funzione restituisce il contenuto della pagina / (root)
 func Root(out http.ResponseWriter, in *http.Request) {
 
-    http.ServeFile(out, in, "./webui/static/root.html")
+	http.ServeFile(out, in, "./webui/static/root.html")
 }

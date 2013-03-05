@@ -20,100 +20,100 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 package admin
 
 import (
-    "github.com/maponet/utils/log"
-    "mapo/db"
+	"github.com/maponet/utils/log"
+	"mapo/db"
 
-    "errors"
-    "time"
-    "labix.org/v2/mgo/bson"
+	"errors"
+	"labix.org/v2/mgo/bson"
+	"time"
 )
 
 type project struct {
-    Id string `bson:"_id"`
-    Name string
-    Description string
-    StudioId string
-    Admins []string
-    Supervisors []string
-    Artists []string
+	Id          string `bson:"_id"`
+	Name        string
+	Description string
+	StudioId    string
+	Admins      []string
+	Supervisors []string
+	Artists     []string
 
-    Created time.Time
-    Addons map[string][]string `json:"-"`
+	Created time.Time
+	Addons  map[string][]string `json:"-"`
 }
 
 func NewProject() project {
-    p := new(project)
-    p.Admins = make([]string, 0)
-    p.Supervisors = make([]string, 0)
-    p.Artists = make([]string, 0)
+	p := new(project)
+	p.Admins = make([]string, 0)
+	p.Supervisors = make([]string, 0)
+	p.Artists = make([]string, 0)
 	p.Addons = make(map[string][]string, 0)
 
-    return *p
+	return *p
 }
 
 func (p *project) SetName(value string) error {
-    if len(value) > 6 {
-        p.Name = value
-        return nil
-    }
+	if len(value) > 6 {
+		p.Name = value
+		return nil
+	}
 
-    return errors.New("nome progetto tropo corto")
+	return errors.New("nome progetto tropo corto")
 }
 
 func (p *project) SetDescription(value string) error {
-    p.Description = value
+	p.Description = value
 
-    return nil
+	return nil
 }
 
 func (p *project) SetId(value string) error {
 
-    if len(value) < 32 {
-        return errors.New("troppo corto")
-    }
-    p.Id = value
-    return nil
+	if len(value) < 32 {
+		return errors.New("troppo corto")
+	}
+	p.Id = value
+	return nil
 }
 
 func (p *project) SetStudioId(value string) error {
-    p.StudioId = value
+	p.StudioId = value
 
-    return nil
+	return nil
 }
 
 func (p *project) Save() error {
-    log.Debug("save project to database")
-    err := db.Store(p, "projects")
-    return err
+	log.Debug("save project to database")
+	err := db.Store(p, "projects")
+	return err
 }
 
 func (p *project) Update() error {
-    log.Debug("update project to database")
-    err := db.Update(p, p.Id, "projects")
-    return err
+	log.Debug("update project to database")
+	err := db.Update(p, p.Id, "projects")
+	return err
 }
 
 func ProjectRestorList(filter bson.M) ([]project, error) {
-    p := make([]project, 0)
+	p := make([]project, 0)
 
-    err := db.RestoreList(&p, filter, "projects")
+	err := db.RestoreList(&p, filter, "projects")
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    return p, nil
+	return p, nil
 }
 
 func (p *project) Restore() error {
 
-    err := db.RestoreOne(&p, bson.M{"_id":p.Id}, "projects")
+	err := db.RestoreOne(&p, bson.M{"_id": p.Id}, "projects")
 
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    return nil
+	return nil
 }
 
 func (p *project) AddAddon(entity, addonId string) {
@@ -124,7 +124,7 @@ func (p *project) AddAddon(entity, addonId string) {
 	if !ok {
 		p.Addons[entity] = make([]string, 0)
 	}
-	for _, aId := range(ent) {
+	for _, aId := range ent {
 		if aId == addonId {
 			return
 		}
@@ -136,5 +136,5 @@ func (p *project) AddAddon(entity, addonId string) {
 // ritorna dal database la lista dei addon attivi per il progetto
 func (p *project) GetAddonList(entity string) []string {
 
-    return p.Addons[entity]
+	return p.Addons[entity]
 }

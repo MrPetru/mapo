@@ -44,9 +44,9 @@ func namePrefix(entity addons.CompEntity, data addons.RequestData) (addons.CompE
 
 	entity.Restore("")
 
-	for _, e := range(entity.List()) {
+	for _, e := range entity.List() {
 		name := e.GetAttribute("name")
-		name = "prefixed_"+name
+		name = "prefixed_" + name
 
 		e.SetAttribute("name", name)
 	}

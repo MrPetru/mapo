@@ -20,76 +20,76 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 package admin
 
 import (
-    "github.com/maponet/utils/log"
+	"github.com/maponet/utils/log"
 
-    "net/http"
-    "labix.org/v2/mgo/bson"
+	"labix.org/v2/mgo/bson"
+	"net/http"
 )
 
 // NewStudio crea un nuovo studio
 func httpNewStudio(out http.ResponseWriter, in *http.Request) {
-    // create new studio
-    log.Info("executing NewStudio function")
+	// create new studio
+	log.Info("executing NewStudio function")
 
-    errors := NewCoreErr()
+	errors := NewCoreErr()
 
-    // creamo un nuovo contenitore di tipo studio
-    studio := NewStudio()
+	// creamo un nuovo contenitore di tipo studio
+	studio := NewStudio()
 
-    name := in.FormValue("name")
-    err := studio.SetName(name)
-    errors.append("name", err)
+	name := in.FormValue("name")
+	err := studio.SetName(name)
+	errors.append("name", err)
 
-    currentuid := in.FormValue("currentuid")
-    err = studio.AppendOwner(currentuid)
-    errors.append("ownerid", err)
+	currentuid := in.FormValue("currentuid")
+	err = studio.AppendOwner(currentuid)
+	errors.append("ownerid", err)
 
-    id := in.FormValue("studioid")
-    err = studio.SetId(id)
-    errors.append("studioid", err)
+	id := in.FormValue("studioid")
+	err = studio.SetId(id)
+	errors.append("studioid", err)
 
-    description := in.FormValue("description")
-    err = studio.SetDescription(description)
-    errors.append("description", err)
+	description := in.FormValue("description")
+	err = studio.SetDescription(description)
+	errors.append("description", err)
 
-    if len(errors) > 0 {
-        WriteJsonResult(out, errors, "error")
-        return
-    }
+	if len(errors) > 0 {
+		WriteJsonResult(out, errors, "error")
+		return
+	}
 
-    err = studio.Save()
-    if err != nil {
-        errors.append("on store", err)
-        WriteJsonResult(out, errors, "error")
-        return
-    }
+	err = studio.Save()
+	if err != nil {
+		errors.append("on store", err)
+		WriteJsonResult(out, errors, "error")
+		return
+	}
 
-    WriteJsonResult(out, studio, "ok")
+	WriteJsonResult(out, studio, "ok")
 }
 
 // GetStudio restituisce al utente le informazioni di un solo progetto
 func httpGetStudio(out http.ResponseWriter, in *http.Request) {
 
-    errors := NewCoreErr()
+	errors := NewCoreErr()
 
-    id := in.FormValue("sid")
-    if len(id) == 0 {
-        errors.append("id", "no studio id was provided")
-        WriteJsonResult(out, errors, "error")
-        return
-    }
+	id := in.FormValue("sid")
+	if len(id) == 0 {
+		errors.append("id", "no studio id was provided")
+		WriteJsonResult(out, errors, "error")
+		return
+	}
 
-    currentuid := in.FormValue("currentuid")
+	currentuid := in.FormValue("currentuid")
 
-    studio, err := StudioRestoreAll(bson.M{"owners":currentuid, "_id":id})
+	studio, err := StudioRestoreAll(bson.M{"owners": currentuid, "_id": id})
 
-    if err != nil || len(studio) != 1 {
-        errors.append("on restore", "error on studio restore from database")
-        WriteJsonResult(out, errors, "error")
-        return
-    }
+	if err != nil || len(studio) != 1 {
+		errors.append("on restore", "error on studio restore from database")
+		WriteJsonResult(out, errors, "error")
+		return
+	}
 
-    WriteJsonResult(out, studio[0], "ok")
+	WriteJsonResult(out, studio[0], "ok")
 }
 
 /*
@@ -108,50 +108,50 @@ le situazioni:
     un dato nullo per quella chiave.
 */
 func httpUpdateStudio(out http.ResponseWriter, in *http.Request) {
-    // patch o normal_update?
+	// patch o normal_update?
 
-    // proviamo a implementare questa funzione come patch: i campi non ricevuti
-    // verranno ignorati.
+	// proviamo a implementare questa funzione come patch: i campi non ricevuti
+	// verranno ignorati.
 
-    sid := in.FormValue("sid")
-    studio := NewStudio()
-    studio.SetId(sid)
-    err := studio.Restore()
-    if err != nil {
-        return
-    }
+	sid := in.FormValue("sid")
+	studio := NewStudio()
+	studio.SetId(sid)
+	err := studio.Restore()
+	if err != nil {
+		return
+	}
 
-    //description
-    if _, ok := in.Form["description"]; ok {
-        studio.SetDescription(in.FormValue("description"))
-    }
+	//description
+	if _, ok := in.Form["description"]; ok {
+		studio.SetDescription(in.FormValue("description"))
+	}
 
-    //name
-    if _, ok := in.Form["name"]; ok {
-        studio.SetName(in.FormValue("name"))
-    }
+	//name
+	if _, ok := in.Form["name"]; ok {
+		studio.SetName(in.FormValue("name"))
+	}
 
-    //owners
-    if _, ok := in.Form["owner"]; ok {
-        studio.AppendOwner(in.FormValue("owner"))
-        // dobbiamo anche cancellare dei owners dalla lista?
-    }
+	//owners
+	if _, ok := in.Form["owner"]; ok {
+		studio.AppendOwner(in.FormValue("owner"))
+		// dobbiamo anche cancellare dei owners dalla lista?
+	}
 
-    studio.Update()
+	studio.Update()
 
-    WriteJsonResult(out, studio, "ok")
+	WriteJsonResult(out, studio, "ok")
 }
 
 // GetStudioAll restituisce al cliente le informazioni di piu' progetti in una
 // lista
 func httpGetStudioAll(out http.ResponseWriter, in *http.Request) {
-    // create new studio
-    currentuid := in.FormValue("currentuid")
+	// create new studio
+	currentuid := in.FormValue("currentuid")
 
-    studios, err := StudioRestoreAll(bson.M{"owners":currentuid})
+	studios, err := StudioRestoreAll(bson.M{"owners": currentuid})
 
-    if err != nil {
-        WriteJsonResult(out, err, "error")
-    }
-    WriteJsonResult(out, studios, "ok")
+	if err != nil {
+		WriteJsonResult(out, err, "error")
+	}
+	WriteJsonResult(out, studios, "ok")
 }

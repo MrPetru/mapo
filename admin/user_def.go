@@ -20,62 +20,62 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 package admin
 
 import (
-    "github.com/maponet/utils/log"
-    "mapo/db"
+	"github.com/maponet/utils/log"
+	"mapo/db"
 
-    "errors"
-    "time"
-    "labix.org/v2/mgo/bson"
+	"errors"
+	"labix.org/v2/mgo/bson"
+	"time"
 )
 
 type user struct {
-    Id string `bson:"_id"`
-    Name string
-    Email string
-    Oauthid string
-    Oauthprovider string
-    Avatar string `json:"picture"`
+	Id            string `bson:"_id"`
+	Name          string
+	Email         string
+	Oauthid       string
+	Oauthprovider string
+	Avatar        string `json:"picture"`
 
-    Registered time.Time `json:"-"`
-    AccessToken string `json:"-"`
+	Registered  time.Time `json:"-"`
+	AccessToken string    `json:"-"`
 }
 
 func NewUser() user {
-    u := new(user)
-    return *u
+	u := new(user)
+	return *u
 }
 
 func (u *user) CreateId() {
-    u.Id = Md5sum(u.Oauthprovider + u.Oauthid)
+	u.Id = Md5sum(u.Oauthprovider + u.Oauthid)
 }
 
 func (u *user) SetId(id string) error {
-    if len(id) != 32 {
-        return errors.New("invalid user id")
-    }
+	if len(id) != 32 {
+		return errors.New("invalid user id")
+	}
 
-    u.Id = id
-    return nil
+	u.Id = id
+	return nil
 }
 
 func (u *user) GetId() string {
-    return u.Id
+	return u.Id
 }
 
 func (u *user) Restore() error {
-    id := u.Id
-    err := db.RestoreOne(u, bson.M{"_id":id}, "users")
-    return err
+	id := u.Id
+	err := db.RestoreOne(u, bson.M{"_id": id}, "users")
+	return err
 }
 
 func (u *user) Save() error {
-    log.Debug("save user to database")
-    err := db.Store(u, "users")
-    return err
+	log.Debug("save user to database")
+	err := db.Store(u, "users")
+	return err
 }
 
-func (u * user) Update() error {
-    log.Debug("update user to database")
-    err := db.Update(u, u.Id, "users")
-    return err
+func (u *user) Update() error {
+	log.Debug("update user to database")
+	err := db.Update(u, u.Id, "users")
+	return err
 }

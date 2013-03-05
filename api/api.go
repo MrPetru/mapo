@@ -23,26 +23,26 @@ Package api implements the API framework used by addons.
 package api
 
 import (
-    "github.com/maponet/utils/log"
-    "mapo/admin"
+	"github.com/maponet/utils/log"
+	"mapo/admin"
 
-    "net/http"
-    "strings"
 	"errors"
-    "labix.org/v2/mgo/bson"
+	"labix.org/v2/mgo/bson"
+	"net/http"
+	"strings"
 )
 
 // apiData e' il contenitore dei dati che vengono inviati verso la funzione
 // che processa la richiesta.
 type apiData struct {
-    Method string
-    ProjectId string
-    ResourceType string
-    ResourceId string
-    ResourceFunction string
+	Method           string
+	ProjectId        string
+	ResourceType     string
+	ResourceId       string
+	ResourceFunction string
 
-    StudioId string
-    ExtraData map[string][]string
+	StudioId  string
+	ExtraData map[string][]string
 }
 
 func (data *apiData) GetValue(name string) string {
@@ -59,36 +59,36 @@ func (data *apiData) GetValue(name string) string {
 }
 
 // NewApiData crea un nuovo oggetto apiData
-func NewApiData() *apiData{
-    a := new(apiData)
+func NewApiData() *apiData {
+	a := new(apiData)
 
-    return a
+	return a
 }
 
 // ApiRouter identifica e esegue la funzione del addon che deve essere eseguita
 // per la risorsa richiesta.
-func ApiRouter(data *apiData) (interface{}, error) {//(*apiData, error) {
+func ApiRouter(data *apiData) (interface{}, error) { //(*apiData, error) {
 
-    var err error
+	var err error
 
-    // verifica se il progetto e lo studio sono collegati
-    {
-        studios, err := admin.StudioRestoreAll(bson.M{"_id":data.StudioId,"projects":data.ProjectId})
-        if err != nil {
+	// verifica se il progetto e lo studio sono collegati
+	{
+		studios, err := admin.StudioRestoreAll(bson.M{"_id": data.StudioId, "projects": data.ProjectId})
+		if err != nil {
 			return nil, err
 		}
 		if len(studios) != 1 {
 			log.Error("incorect query to database")
-            return nil, errors.New("cant't find asociated projects")
-        }
-    }
+			return nil, errors.New("cant't find asociated projects")
+		}
+	}
 
-    project := admin.NewProject()
-    project.SetId(data.ProjectId)
-    err = project.Restore()
-    if err != nil {
-        return nil, err
-    }
+	project := admin.NewProject()
+	project.SetId(data.ProjectId)
+	err = project.Restore()
+	if err != nil {
+		return nil, err
+	}
 
 	// creare il path della funzione da eseguire
 	fPath := ""
@@ -115,7 +115,7 @@ func ApiRouter(data *apiData) (interface{}, error) {//(*apiData, error) {
 	log.Debug("requested function is %v", fPath)
 
 	// get entity type
-    addonsId := project.GetAddonList(data.ResourceType)
+	addonsId := project.GetAddonList(data.ResourceType)
 	if len(addonsId) < 1 {
 		// run default action
 		// return result, err
@@ -127,13 +127,13 @@ func ApiRouter(data *apiData) (interface{}, error) {//(*apiData, error) {
 
 	// create a ordered addons dependency list
 	orderedAddons := orderByDependency(addonsId, Addons)
-	for _, a := range(orderedAddons) {
+	for _, a := range orderedAddons {
 		constructors := Addons[a].Constructors
-		for _, c := range(constructors) {
+		for _, c := range constructors {
 			c(entitiesList)
 		}
 	}
-	for _, e := range(*entitiesList) {
+	for _, e := range *entitiesList {
 		e.projectId = data.ProjectId
 	}
 
@@ -150,62 +150,62 @@ func ApiRouter(data *apiData) (interface{}, error) {//(*apiData, error) {
 // potrebbero essere vari questi wrapper, per esempio per una richiesta ftp o via email.
 func HttpWrapper(out http.ResponseWriter, in *http.Request) {
 
-    //pathPattern := "method:/api/{projectId}/{resource}/{resourceId}/{function}"
+	//pathPattern := "method:/api/{projectId}/{resource}/{resourceId}/{function}"
 
-    urlValues := make([]string, 0)
-    {
-        values := strings.Split(in.URL.Path, "/")
-        for i :=0; i<6; i++ {
-            if i <= (len(values) - 1) {
-                urlValues = append(urlValues, values[i])
-            } else {
-                urlValues = append(urlValues, "")
-            }
-        }
-    }
+	urlValues := make([]string, 0)
+	{
+		values := strings.Split(in.URL.Path, "/")
+		for i := 0; i < 6; i++ {
+			if i <= (len(values) - 1) {
+				urlValues = append(urlValues, values[i])
+			} else {
+				urlValues = append(urlValues, "")
+			}
+		}
+	}
 
-    data := NewApiData()
-    data.Method = in.Method
-    data.ProjectId = urlValues[2]
-    data.ResourceType = urlValues[3]
-    data.ResourceId = urlValues[4]
-    data.ResourceFunction = urlValues[5]
+	data := NewApiData()
+	data.Method = in.Method
+	data.ProjectId = urlValues[2]
+	data.ResourceType = urlValues[3]
+	data.ResourceId = urlValues[4]
+	data.ResourceFunction = urlValues[5]
 
-    {
-        eData := make(map[string][]string)
-        for i,v := range(in.Form) {
-            eData[i] = v
-        }
-        if c, err := in.Cookie("sid"); err == nil {
-            data.StudioId = c.Value
-        }
-        if c, err := in.Cookie("uid"); err == nil {
-            v := c.Value
-            if v != in.FormValue("currentuid") {
-                admin.WriteJsonResult(out, "authentication don't match", "error")
-                return
-            }
-        }
-        if c, err := in.Cookie("pid"); err == nil {
-            v := c.Value
-            if v != data.ProjectId {
-                admin.WriteJsonResult(out, "project don't match", "error")
-                return
-            }
-        }
+	{
+		eData := make(map[string][]string)
+		for i, v := range in.Form {
+			eData[i] = v
+		}
+		if c, err := in.Cookie("sid"); err == nil {
+			data.StudioId = c.Value
+		}
+		if c, err := in.Cookie("uid"); err == nil {
+			v := c.Value
+			if v != in.FormValue("currentuid") {
+				admin.WriteJsonResult(out, "authentication don't match", "error")
+				return
+			}
+		}
+		if c, err := in.Cookie("pid"); err == nil {
+			v := c.Value
+			if v != data.ProjectId {
+				admin.WriteJsonResult(out, "project don't match", "error")
+				return
+			}
+		}
 
-        data.ExtraData = eData
-    }
+		data.ExtraData = eData
+	}
 
-    result, err := ApiRouter(data)
-    if err != nil {
-        admin.WriteJsonResult(out, err.Error(), "error")
-        return
-    }
+	result, err := ApiRouter(data)
+	if err != nil {
+		admin.WriteJsonResult(out, err.Error(), "error")
+		return
+	}
 
-    log.Debug("err = %v", err)
-    log.Debug("api data = %v", data)
-    log.Debug("result = %v", result)
+	log.Debug("err = %v", err)
+	log.Debug("api data = %v", data)
+	log.Debug("result = %v", result)
 
-    admin.WriteJsonResult(out, result, "ok")
+	admin.WriteJsonResult(out, result, "ok")
 }

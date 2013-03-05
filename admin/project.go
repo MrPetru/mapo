@@ -20,8 +20,8 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 package admin
 
 import (
-    "net/http"
-    "labix.org/v2/mgo/bson"
+	"labix.org/v2/mgo/bson"
+	"net/http"
 )
 
 /*
@@ -29,56 +29,56 @@ NewProject crea un nuovo progetto.
 */
 func httpNewProject(out http.ResponseWriter, in *http.Request) {
 
-    errors := NewCoreErr()
+	errors := NewCoreErr()
 
-    project := NewProject()
+	project := NewProject()
 
-    name := in.FormValue("name")
-    err := project.SetName(name)
-    errors.append("name", err)
+	name := in.FormValue("name")
+	err := project.SetName(name)
+	errors.append("name", err)
 
-    description := in.FormValue("description")
-    err = project.SetDescription(description)
-    errors.append("description", err)
+	description := in.FormValue("description")
+	err = project.SetDescription(description)
+	errors.append("description", err)
 
-    sidCookie, err := in.Cookie("sid")
-    studioID := sidCookie.Value
+	sidCookie, err := in.Cookie("sid")
+	studioID := sidCookie.Value
 
-    studio := NewStudio()
-    err = studio.SetId(studioID)
-    errors.append("studioid", err)
+	studio := NewStudio()
+	err = studio.SetId(studioID)
+	errors.append("studioid", err)
 
-    err = studio.Restore()
-    errors.append("on studio restore", err)
+	err = studio.Restore()
+	errors.append("on studio restore", err)
 
-    if len(errors) > 0 {
-        WriteJsonResult(out, errors, "error")
-        return
-    }
+	if len(errors) > 0 {
+		WriteJsonResult(out, errors, "error")
+		return
+	}
 
-    id := Md5sum(studioID + name)
-    err = project.SetId(id)
-    errors.append("id", err)
+	id := Md5sum(studioID + name)
+	err = project.SetId(id)
+	errors.append("id", err)
 
-    project.SetStudioId(studioID)
+	project.SetStudioId(studioID)
 
-    _ = studio.AppendProject(id)
-    err = studio.Update()
-    errors.append("update studio", err)
+	_ = studio.AppendProject(id)
+	err = studio.Update()
+	errors.append("update studio", err)
 
-    if len(errors) > 0 {
-        WriteJsonResult(out, errors, "error")
-        return
-    }
+	if len(errors) > 0 {
+		WriteJsonResult(out, errors, "error")
+		return
+	}
 
-    err = project.Save()
-    if err != nil {
-        errors.append("on save", err)
-        WriteJsonResult(out, errors, "error")
-        return
-    }
+	err = project.Save()
+	if err != nil {
+		errors.append("on save", err)
+		WriteJsonResult(out, errors, "error")
+		return
+	}
 
-    WriteJsonResult(out, project, "ok")
+	WriteJsonResult(out, project, "ok")
 }
 
 /*
@@ -87,25 +87,25 @@ nella sessione del utente.
 */
 func httpGetProjectAll(out http.ResponseWriter, in *http.Request) {
 
-    errors := NewCoreErr()
+	errors := NewCoreErr()
 
-    sidCookie, err := in.Cookie("sid")
-    if err != nil {
-        errors.append("studio", "no active studio in current session")
-        WriteJsonResult(out, errors, "error")
-        return
-    }
-    studioID := sidCookie.Value
+	sidCookie, err := in.Cookie("sid")
+	if err != nil {
+		errors.append("studio", "no active studio in current session")
+		WriteJsonResult(out, errors, "error")
+		return
+	}
+	studioID := sidCookie.Value
 
-    filter := bson.M{"studioid":studioID}
+	filter := bson.M{"studioid": studioID}
 
-    projectlist, err := ProjectRestorList(filter)
+	projectlist, err := ProjectRestorList(filter)
 
-    if err != nil {
-        WriteJsonResult(out, err, "error")
-    }
+	if err != nil {
+		WriteJsonResult(out, err, "error")
+	}
 
-    WriteJsonResult(out, projectlist, "ok")
+	WriteJsonResult(out, projectlist, "ok")
 }
 
 /*
@@ -113,54 +113,54 @@ GetProject restituisce al utente le informazioni di un singolo progetto.
 */
 func httpGetProject(out http.ResponseWriter, in *http.Request) {
 
-    errors := NewCoreErr()
+	errors := NewCoreErr()
 
-    id := in.FormValue("pid")
-    if len(id) == 0 {
-        errors.append("id", "no project id was provided")
-        WriteJsonResult(out, errors, "error")
-        return
-    }
+	id := in.FormValue("pid")
+	if len(id) == 0 {
+		errors.append("id", "no project id was provided")
+		WriteJsonResult(out, errors, "error")
+		return
+	}
 
-    sidCookie, err := in.Cookie("sid")
-    if err != nil {
-        errors.append("studioid", "no studio id was provided")
-        WriteJsonResult(out, errors, "error")
-        return
-    }
+	sidCookie, err := in.Cookie("sid")
+	if err != nil {
+		errors.append("studioid", "no studio id was provided")
+		WriteJsonResult(out, errors, "error")
+		return
+	}
 
-    sid := sidCookie.Value
+	sid := sidCookie.Value
 
-    studio := NewStudio()
-    studio.SetId(sid)
-    err = studio.Restore()
-    if err != nil {
-        return
-    }
+	studio := NewStudio()
+	studio.SetId(sid)
+	err = studio.Restore()
+	if err != nil {
+		return
+	}
 
-    if studio.Id != sid {
-        return
-    }
+	if studio.Id != sid {
+		return
+	}
 
-    project := NewProject()
-    project.SetId(id)
-    err = project.Restore()
-    if err != nil {
-        return
-    }
+	project := NewProject()
+	project.SetId(id)
+	err = project.Restore()
+	if err != nil {
+		return
+	}
 
-    WriteJsonResult(out, project, "ok")
+	WriteJsonResult(out, project, "ok")
 }
 
 func httpAppendAddon(out http.ResponseWriter, in *http.Request) {
 	errors := NewCoreErr()
 
 	id := in.FormValue("pid")
-    if len(id) == 0 {
-        errors.append("id", "no project id was provided")
-        WriteJsonResult(out, errors, "error")
-        return
-    }
+	if len(id) == 0 {
+		errors.append("id", "no project id was provided")
+		WriteJsonResult(out, errors, "error")
+		return
+	}
 
 	addonId := in.FormValue("addonid")
 	entityName := in.FormValue("entityname")

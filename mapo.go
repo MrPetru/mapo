@@ -20,29 +20,29 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
-    "mapo/webui"
-    "mapo/api"
-    "mapo/db"
-	"mapo/admin"
-	"github.com/maponet/utils/log"
 	"github.com/maponet/utils/conf"
+	"github.com/maponet/utils/log"
+	"mapo/admin"
+	"mapo/api"
+	"mapo/db"
+	"mapo/webui"
 
 	"flag"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-	)
+)
 
 func main() {
 
 	/*
-	parse flags
+		parse flags
 
-	In some situation we will pass path to configuration file as a command line
-	value. This meaning that for first off all we need to define and parse all flags.
-	The only flag that we required on this step is only conf flag ... But we
-	can't distribute code with same functionality along file or files.
+		In some situation we will pass path to configuration file as a command line
+		value. This meaning that for first off all we need to define and parse all flags.
+		The only flag that we required on this step is only conf flag ... But we
+		can't distribute code with same functionality along file or files.
 	*/
 	var logLevel = log.FlagLevel("log")
 	var confFilePath = flag.String("conf", "./conf.ini", "set path to configuration file")
@@ -73,45 +73,44 @@ func main() {
 
 	// init db
 	log.Info("Initializing db")
-    /*
-    in questa configurazione, connessione alla database viene attivata in un
-    oggetto definito globalmente al interno del modulo db.
-    L'idea originale per Mapo è di creare un oggetto che contenga la
-    connessione attiva e passare questo aggetto a tutte le funzione che ne
-    hanno bisogno di fare una richiesta alla database.
+	/*
+	   in questa configurazione, connessione alla database viene attivata in un
+	   oggetto definito globalmente al interno del modulo db.
+	   L'idea originale per Mapo è di creare un oggetto che contenga la
+	   connessione attiva e passare questo aggetto a tutte le funzione che ne
+	   hanno bisogno di fare una richiesta alla database.
 
-    Passare l'oggetto database da una funzione ad altra, potrebbe
-    significare, creare una catena dalla prima funzione all'ultima. Che
-    avvolte non fa niente altro che aumentare il numero dei parametri passati
-    da una funzione ad altra. Per esempio, la connessione al database si usa
-    nel modulo objectspace che viene chiamato dal modulo admin che al suo tempo
-    viene chiamato da main. Inutile passare questo oggetto al modulo admin,
-    visto che li lui non serve.
+	   Passare l'oggetto database da una funzione ad altra, potrebbe
+	   significare, creare una catena dalla prima funzione all'ultima. Che
+	   avvolte non fa niente altro che aumentare il numero dei parametri passati
+	   da una funzione ad altra. Per esempio, la connessione al database si usa
+	   nel modulo objectspace che viene chiamato dal modulo admin che al suo tempo
+	   viene chiamato da main. Inutile passare questo oggetto al modulo admin,
+	   visto che li lui non serve.
 
-    NOTA: accesso ai oggetti globali deve essere in qualche modo sincronizzato
-    per evitare i problemi di inconsistenza.
+	   NOTA: accesso ai oggetti globali deve essere in qualche modo sincronizzato
+	   per evitare i problemi di inconsistenza.
 
-    NOTA: le osservazioni dimostrano che avendo una connessione attiva alla
-    database che poi viene riutilizzata, diminuisce considerevolmente i tempi di
-    interrogazione.
-    */
-    err = db.NewConnection("mapo")
-    if err != nil {
-        log.Error("%v", err)
-        return
-    }
-
+	   NOTA: le osservazioni dimostrano che avendo una connessione attiva alla
+	   database che poi viene riutilizzata, diminuisce considerevolmente i tempi di
+	   interrogazione.
+	*/
+	err = db.NewConnection("mapo")
+	if err != nil {
+		log.Error("%v", err)
+		return
+	}
 
 	// load addons
 	log.Info("Loading addons")
 	api.RegisterAddons()
-    /*
-    anche qui il discorso è molto simile a quello della connessione alla
-    database.
-    Passare l'oggetto addons nella catena per arrivare al punto di destinazione
-    potrebbe creare dei disagi.
-    */
-    log.Info("load addons and generate a list")
+	/*
+	   anche qui il discorso è molto simile a quello della connessione alla
+	   database.
+	   Passare l'oggetto addons nella catena per arrivare al punto di destinazione
+	   potrebbe creare dei disagi.
+	*/
+	log.Info("load addons and generate a list")
 
 	// al momento del spegnimento dell'applicazione potremo trovarci con delle
 	// connessione attive dal parte del cliente. Il handler personalizzato usato
@@ -141,16 +140,16 @@ func main() {
 	admin.Activate(muxer)
 	api.Activate(muxer)
 
-    muxer.HandleFunc("GET", "/", webui.Root)
+	muxer.HandleFunc("GET", "/", webui.Root)
 
-    jsHandler := http.StripPrefix("/js/", http.FileServer(http.Dir("./webui/static/js")))
-    muxer.Handle("GET", "/js/.*\\.js", jsHandler)
+	jsHandler := http.StripPrefix("/js/", http.FileServer(http.Dir("./webui/static/js")))
+	muxer.Handle("GET", "/js/.*\\.js", jsHandler)
 
-    cssHandler := http.StripPrefix("/css/", http.FileServer(http.Dir("./webui/static/css")))
-    muxer.Handle("GET", "/css/.*\\.css", cssHandler)
+	cssHandler := http.StripPrefix("/css/", http.FileServer(http.Dir("./webui/static/css")))
+	muxer.Handle("GET", "/css/.*\\.css", cssHandler)
 
-    icoHandler := http.StripPrefix("/", http.FileServer(http.Dir("./webui/static/image")))
-    muxer.Handle("GET", "/favicon\\.ico", icoHandler)
+	icoHandler := http.StripPrefix("/", http.FileServer(http.Dir("./webui/static/image")))
+	muxer.Handle("GET", "/favicon\\.ico", icoHandler)
 
 	// register with supervisor
 	log.Info("Joining supervisor")
@@ -162,19 +161,19 @@ func main() {
 	// inform supervisor that we are up
 
 	// for each request
-		// check authentication/authorization
+	// check authentication/authorization
 
-		// extract request operation
+	// extract request operation
 
-		// extract request arguments
+	// extract request arguments
 
-		// pass operation and arguments to api.router
+	// pass operation and arguments to api.router
 
-			// find function mapped to operation
+	// find function mapped to operation
 
-			// call function with arguments
+	// call function with arguments
 
-		// return result to user
+	// return result to user
 
 	// close on signal
 	log.Info("Closing application")

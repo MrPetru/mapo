@@ -20,11 +20,11 @@ along with Mapo.  If not, see <http://www.gnu.org/licenses/>.
 package api
 
 import (
+	"mapo/addons/repo/go/asset"
+	"mapo/addons/repo/go/collaborator"
 	"mapo/addons/repo/go/scene"
 	"mapo/addons/repo/go/shot"
 	"mapo/addons/repo/go/shotpatch"
-	"mapo/addons/repo/go/collaborator"
-	"mapo/addons/repo/go/asset"
 
 	"mapo/addons"
 )
@@ -34,10 +34,10 @@ func RegisterAddons() {
 	registers := []func(addons.Addon){
 		scene.Register, shot.Register, shotpatch.Register, collaborator.Register,
 		asset.Register,
-		}
+	}
 
 	newAddonContainer()
-	for _, r := range(registers) {
+	for _, r := range registers {
 		add := new(addon)
 		add.dependByAddons = make(map[string]*addon)
 		r(add)

@@ -23,16 +23,16 @@ Package admin implements the API for Mapo's administration components.
 package admin
 
 import (
-    "encoding/json"
-    "net/http"
-    "fmt"
 	"crypto/md5"
+	"encoding/json"
+	"fmt"
+	"net/http"
 )
 
 // statusResult aiuta a formattare i dati inviati verso il cliente
 type statusResult struct {
-    Status string `json:"status"`
-    Data interface{} `json:"data"`
+	Status string      `json:"status"`
+	Data   interface{} `json:"data"`
 }
 
 // WriteJsonResult è una scorciatoia per inviare il risultato verso il cliente
@@ -40,47 +40,47 @@ type statusResult struct {
 // TODO: in caso di errore che codice dobbiamo ritornare? 412? 424?
 func WriteJsonResult(out http.ResponseWriter, data interface{}, status string) {
 
-    result := new(statusResult)
+	result := new(statusResult)
 
-    result.Status = status
-    result.Data = data
+	result.Status = status
+	result.Data = data
 
-    jsonResult, _ := json.Marshal(result)
+	jsonResult, _ := json.Marshal(result)
 
-    out.Header().Set("Content-Type","application/json;charset=UTF-8")
-    fmt.Fprint(out, string(jsonResult))
+	out.Header().Set("Content-Type", "application/json;charset=UTF-8")
+	fmt.Fprint(out, string(jsonResult))
 }
 
 // coreErr è un contenitore per gli errori.
 type coreErr map[string][]string
 
 // NewCoreErr crea un nuovo oggetto di tipo coreErr
-func NewCoreErr() coreErr{
-    ce := make(coreErr, 0)
-    return ce
+func NewCoreErr() coreErr {
+	ce := make(coreErr, 0)
+	return ce
 }
 
 // append aggiunge una nuovo elemento alla lista di errori per una chiave specifica.
 func (ce *coreErr) append(key string, err interface{}) {
-    if err == nil {
-        return
-    }
+	if err == nil {
+		return
+	}
 
-    if e, ok := err.(error); ok {
-        if e != nil {
-            (*ce)[key] = append((*ce)[key], e.Error())
-        }
-    } else {
-        (*ce)[key] = append((*ce)[key], err.(string))
-    }
+	if e, ok := err.(error); ok {
+		if e != nil {
+			(*ce)[key] = append((*ce)[key], e.Error())
+		}
+	} else {
+		(*ce)[key] = append((*ce)[key], err.(string))
+	}
 }
 
 // crea la soma md5 di una stringa
 func Md5sum(value string) string {
-    sum := md5.New()
-    sum.Write([]byte(value))
+	sum := md5.New()
+	sum.Write([]byte(value))
 
-    result := fmt.Sprintf("%x", sum.Sum(nil))
+	result := fmt.Sprintf("%x", sum.Sum(nil))
 
-    return result
+	return result
 }

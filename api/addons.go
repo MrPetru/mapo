@@ -24,10 +24,10 @@ shipped with the official distribution.
 package api
 
 import (
-	"mapo/addons"
-	"github.com/maponet/utils/log"
-	"fmt"
 	"errors"
+	"fmt"
+	"github.com/maponet/utils/log"
+	"mapo/addons"
 )
 
 const (
@@ -73,12 +73,12 @@ func newAddonContainer() {
 definizione de un singolo addon
 */
 type addon struct {
-	id string
-	name string
-	author string
+	id      string
+	name    string
+	author  string
 	version int
 
-	Constructors []func(addons.EntityContainer)
+	Constructors   []func(addons.EntityContainer)
 	dependByAddons map[string]*addon
 }
 
@@ -113,18 +113,18 @@ func (a *addon) SetVersion(v int) {
 }
 
 func (a *addon) CreateId() error {
-	if (len(a.author)>0 && len(a.name)>0 && a.version>0) {
+	if len(a.author) > 0 && len(a.name) > 0 && a.version > 0 {
 		a.id = fmt.Sprintf("%s:%s:%04d", a.name, a.author, a.version)
 		return nil
 	}
 	return errors.New("cant create addon ID")
 }
 
-func orderByDependency(addonsId []string, Addons addonContainer) []string{
+func orderByDependency(addonsId []string, Addons addonContainer) []string {
 	var hasDep []string = make([]string, 0)
 	var isDep []string = make([]string, 0)
 
-	for _, addId := range(addonsId) {
+	for _, addId := range addonsId {
 		a, ok := Addons[addId]
 		if ok {
 			cycle(a, &hasDep, &isDep)
@@ -135,14 +135,14 @@ func orderByDependency(addonsId []string, Addons addonContainer) []string{
 
 	result := make([]string, 0)
 	// 0 -> n
-	for _, addId := range(isDep) {
+	for _, addId := range isDep {
 		if !inList(result, addId) {
 			result = append(result, addId)
 		}
 	}
 
 	// n -> 0
-	for i:=len(hasDep); i>0 ; i-- {
+	for i := len(hasDep); i > 0; i-- {
 		if !inList(result, hasDep[i-1]) {
 			result = append(result, hasDep[i-1])
 		}
@@ -161,14 +161,14 @@ func cycle(a *addon, has, is *[]string) {
 
 	*has = append(*has, a.id)
 
-	for _, d := range(a.dependByAddons) {
+	for _, d := range a.dependByAddons {
 		cycle(d, has, is)
 	}
 }
 
 func inList(list []string, elem string) bool {
 
-	for _, s := range(list) {
+	for _, s := range list {
 		if s == elem {
 			return true
 		}

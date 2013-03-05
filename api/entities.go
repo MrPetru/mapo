@@ -25,13 +25,13 @@ import (
 
 import (
 	"github.com/maponet/utils/log"
-	"mapo/db"
 	"labix.org/v2/mgo/bson"
+	"mapo/db"
 
-	"regexp"
-	"strings"
 	"mapo/addons"
 	"reflect"
+	"regexp"
+	"strings"
 )
 
 func newEntity(entity addons.CompEntity, data addons.RequestData) (addons.CompEntity, error) {
@@ -43,7 +43,7 @@ func newEntity(entity addons.CompEntity, data addons.RequestData) (addons.CompEn
 	}
 	localEntity := compE.s
 
-	for key, _ := range(localEntity.attributes) {
+	for key, _ := range localEntity.attributes {
 		attrValue := data.GetValue(key)
 		if len(attrValue) > 0 {
 			entity.SetAttribute(key, attrValue)
@@ -89,8 +89,8 @@ func getAll(entity addons.CompEntity, requestData addons.RequestData) (addons.Co
 
 type composedEntity struct {
 	isList bool
-	l []*Entity
-	s *Entity
+	l      []*Entity
+	s      *Entity
 }
 
 func newCompEntity(entity interface{}) addons.CompEntity {
@@ -131,7 +131,7 @@ func (compE *composedEntity) SetAttribute(name, value string) {
 
 func (compE *composedEntity) GetAttribute(name string) string {
 	if compE.IsList() {
-		panic ("cant get attribute from a list of elements")
+		panic("cant get attribute from a list of elements")
 	}
 
 	return compE.s.GetAttribute(name)
@@ -163,25 +163,25 @@ func (compE *composedEntity) Restore(id string) error {
 func (compE *composedEntity) restoreList() error {
 
 	collection := "projectentities"
-	ml := make([]map[string]interface{},0)
-	filter := bson.M{"projectId":compE.s.projectId, "entityName":compE.s.name}
+	ml := make([]map[string]interface{}, 0)
+	filter := bson.M{"projectId": compE.s.projectId, "entityName": compE.s.name}
 	err := db.RestoreList(&ml, filter, collection)
 	if err != nil {
 		return err
 	}
 	log.Debug("restored list of entities from database %v\n", ml)
 
-	for _, entry := range(ml) {
+	for _, entry := range ml {
 		delete(entry, "projectId")
 		ent := new(Entity)
 		ent.attributes = make(map[string]attribute, 0)
-		for ak, _ := range(compE.s.attributes) {
+		for ak, _ := range compE.s.attributes {
 			a := new(attribute)
 			ent.attributes[ak] = *a
 		}
 		ent.name = compE.s.name
 
-		for k, v := range(entry) {
+		for k, v := range entry {
 			if k == "_id" {
 				id := v.(bson.ObjectId)
 				ent.SetAttribute("id", id.Hex())
@@ -207,10 +207,10 @@ func (compE *composedEntity) ToMap() interface{} {
 			return nil
 		}
 
-		list := make([]map[string]interface{},0)
-		for _, e := range(compE.l) {
-			m := make(map[string]interface{},0)
-			for name, attr := range(e.attributes) {
+		list := make([]map[string]interface{}, 0)
+		for _, e := range compE.l {
+			m := make(map[string]interface{}, 0)
+			for name, attr := range e.attributes {
 				m[name] = attr.value
 			}
 			list = append(list, m)
@@ -230,7 +230,7 @@ func (compE *composedEntity) ToMap() interface{} {
 func (compE *composedEntity) List() []addons.CompEntity {
 	if compE.IsList() {
 		l := make([]addons.CompEntity, 0)
-		for _, E := range(compE.l) {
+		for _, E := range compE.l {
 			l = append(l, E)
 		}
 		return l
@@ -240,16 +240,16 @@ func (compE *composedEntity) List() []addons.CompEntity {
 }
 
 type Entity struct {
-	name string
+	name      string
 	projectId string
 	//addonsId []string
-	Function map[string] addons.Method
+	Function   map[string]addons.Method
 	attributes map[string]attribute
 }
 
 type attribute struct {
 	value string
-	t int
+	t     int
 }
 
 func (e *Entity) AddAttribute(name string, t int) {
@@ -283,15 +283,15 @@ func (e *Entity) List() []addons.CompEntity {
 
 func (e *Entity) AddMethod(method, path string, f addons.Method) {
 	if e.Function == nil {
-		e.Function = make(map[string] addons.Method)
+		e.Function = make(map[string]addons.Method)
 	}
 	pattern := createPattern(method, path)
 	e.Function[pattern] = f
 }
 
 func (e *Entity) ToMap() map[string]interface{} {
-	m := make(map[string]interface{},0)
-	for name, attr := range(e.attributes) {
+	m := make(map[string]interface{}, 0)
+	for name, attr := range e.attributes {
 		m[name] = attr.value
 	}
 	log.Debug("entity as map %v\n", m)
@@ -306,7 +306,7 @@ func (e *Entity) Restore(id string) error {
 	m["_id"] = ""
 	delete(m, "id")
 
-	filter := bson.M{"_id":bson.ObjectIdHex(id), "projectId":e.projectId, "entityName":e.name}
+	filter := bson.M{"_id": bson.ObjectIdHex(id), "projectId": e.projectId, "entityName": e.name}
 	err := db.RestoreOne(m, filter, collection)
 	if err != nil {
 		return err
@@ -314,8 +314,8 @@ func (e *Entity) Restore(id string) error {
 
 	m["id"] = ""
 
-	for k, v := range(m) {
-		if k == "_id"  || k == "id" {
+	for k, v := range m {
+		if k == "_id" || k == "id" {
 			e.SetAttribute("id", id)
 			continue
 		}
@@ -353,9 +353,9 @@ func NewEntitiesList() *EntityContainer {
 }
 
 func (es EntityContainer) NewEntity(name string) addons.Entity {
-	e :=new(Entity)
+	e := new(Entity)
 	e.name = name
-	e.Function = make(map[string] addons.Method)
+	e.Function = make(map[string]addons.Method)
 	e.attributes = make(map[string]attribute)
 	e.AddAttribute("id", addons.String)
 	e.AddAttribute("entityName", addons.String)
@@ -380,14 +380,14 @@ func (es EntityContainer) Run(entityName, method, path string, data Data) (addon
 	// find method to be run
 	// run method
 	var f addons.Method
-	for pattern, v := range(entity.Function) {
+	for pattern, v := range entity.Function {
 		log.Debug("pattern is = %v", pattern)
-		matching, _ := regexp.MatchString(pattern, method + ":" + path)
-        if matching {
+		matching, _ := regexp.MatchString(pattern, method+":"+path)
+		if matching {
 			log.Debug("matching")
-            f = v
-            break
-        }
+			f = v
+			break
+		}
 		log.Debug("not matching")
 
 	}
@@ -407,24 +407,24 @@ func (es EntityContainer) Run(entityName, method, path string, data Data) (addon
 }
 
 func createPattern(method, path string) string {
-    pattern := "(?i)^"
+	pattern := "(?i)^"
 
-    if method != "" {
-        pattern = pattern + method + ":/"
-    } else {
-        pattern = pattern + "(GET|POST)" + ":/"
-    }
+	if method != "" {
+		pattern = pattern + method + ":/"
+	} else {
+		pattern = pattern + "(GET|POST)" + ":/"
+	}
 
-    if len(path) > 1 {
-        pathSlice := strings.Split(path[1:], "/")
-        for _, v := range(pathSlice) {
-            if v[0] == '{' {
-                pattern = pattern + "[0-9a-z_\\ \\.\\+\\-]{24,}/"
-            } else {
-                pattern = pattern + v + "/"
-            }
-        }
-    }
-    pattern = pattern + "$"
-    return pattern
+	if len(path) > 1 {
+		pathSlice := strings.Split(path[1:], "/")
+		for _, v := range pathSlice {
+			if v[0] == '{' {
+				pattern = pattern + "[0-9a-z_\\ \\.\\+\\-]{24,}/"
+			} else {
+				pattern = pattern + v + "/"
+			}
+		}
+	}
+	pattern = pattern + "$"
+	return pattern
 }
